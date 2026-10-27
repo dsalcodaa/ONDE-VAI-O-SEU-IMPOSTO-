@@ -17,6 +17,7 @@ function norm(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-
 function col(i) { return 'var(--s' + ((i % 8) + 1) + ')'; }
 var TOT = D.tot, REC = D.rec, M = D.meses;
 var DAYS = 273;
+var CMAP = null, redrawForn = null, printHooks = [];
 
 /* ---------- tooltip ---------- */
 var tip = $('tip');
@@ -86,8 +87,12 @@ $('cem-leg').innerHTML = segs.map(function (s) {
 }).join('');
 
 /* ---------- mês a mês ---------- */
-var recM = REC.mes, pagM = D.pagoMes;
-(function () {
+var HI = window.HIST || null;
+var MES12 = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+var YEARS = HI ? HI.anos.concat([2026]) : [2026], curYear = 2026;
+function monthSeries(y) { return y === 2026 ? { rec: REC.mes, pago: D.pagoMes } : HI.mes[y]; }
+function drawMonths(y) {
+  var S = monthSeries(y), recM = S.rec, pagM = S.pago, M = MES12.slice(0, recM.length);
   var W = 800, H = 340, L = 60, R = 16, T = 18, B = 34;
   var mx = Math.max.apply(null, recM.concat(pagM)), top = Math.ceil(mx / 1e9) * 1e9;
   var xs = function (i) { return L + (W - L - R) * i / (M.length - 1); };
@@ -97,7 +102,7 @@ var recM = REC.mes, pagM = D.pagoMes;
   var path = function (a) { return a.map(function (v, i) { return (i ? 'L' : 'M') + xs(i).toFixed(1) + ' ' + ys(v).toFixed(1); }).join(' '); };
   var pts = function (a, c, cls) { return a.map(function (v, i) { return '<circle class="pt ' + cls + '" data-i="' + i + '" cx="' + xs(i).toFixed(1) + '" cy="' + ys(v).toFixed(1) + '" r="4.5" fill="' + c + '"/>'; }).join(''); };
   var xl = M.map(function (m, i) { return '<text x="' + xs(i) + '" y="' + (H - 10) + '" text-anchor="middle">' + m + '</text>'; }).join('');
-  $('linha').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linhas de arrecadação e gasto por mês, de janeiro a setembro">' + g + '<line class="ax" x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(0) + '" y2="' + ys(0) + '"/>' + xl +
+  $('linha').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linhas de arrecadação e gasto por mês em ' + y + '">' + g + '<line class="ax" x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(0) + '" y2="' + ys(0) + '"/>' + xl +
     '<line id="cross" x1="0" x2="0" y1="' + T + '" y2="' + ys(0) + '" stroke="var(--axis)" stroke-dasharray="4 3" visibility="hidden"/>' +
     '<path class="ln" d="' + path(recM) + '" stroke="var(--s3)"/><path class="ln" d="' + path(pagM) + '" stroke="var(--s2)"/>' + pts(recM, 'var(--s3)', 'r') + pts(pagM, 'var(--s2)', 'p') +
     '<rect id="hit" x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '" fill="transparent"/></svg>';
@@ -114,12 +119,21 @@ var recM = REC.mes, pagM = D.pagoMes;
   $('linha-leg').innerHTML = '<span><i class="sw" style="background:var(--s3)"></i>Entrou (receita realizada)</span><span><i class="sw" style="background:var(--s2)"></i>Saiu (despesa paga)</span>';
   var sr = recM.reduce(function (a, b) { return a + b; }, 0), sp = pagM.reduce(function (a, b) { return a + b; }, 0);
   var iR = recM.indexOf(Math.max.apply(null, recM)), iP = pagM.indexOf(Math.max.apply(null, pagM));
-  $('mes-texto').innerHTML = 'Em média, entraram <strong>' + money(sr / 9) + ' por mês</strong> e saíram <strong>' + money(sp / 9) + ' por mês</strong>. O mês de maior arrecadação foi <strong>' + M[iR] + '</strong> (' + money(recM[iR]) + ') e o de maior gasto foi <strong>' + M[iP] + '</strong> (' + money(pagM[iP]) + '). A diferença de ' + money(sr - sp) + ' entre o que entrou e o que saiu não é “lucro”: inclui contas já contratadas e ainda não pagas e dinheiro em caixa.';
+  $('mes-texto').innerHTML = (y === 2026 ? 'Em 2026 (janeiro a setembro): ' : 'Em ' + y + ': ') + 'em média, entraram <strong>' + money(sr / M.length) + ' por mês</strong> e saíram <strong>' + money(sp / M.length) + ' por mês</strong>. O mês de maior arrecadação foi <strong>' + M[iR] + '</strong> (' + money(recM[iR]) + ') e o de maior gasto foi <strong>' + M[iP] + '</strong> (' + money(pagM[iP]) + '). A diferença de ' + money(sr - sp) + ' entre o que entrou e o que saiu não é “lucro”: inclui contas já contratadas e ainda não pagas e dinheiro em caixa.';
   cols($('col-rec'), recM, 'var(--s3)', M); cols($('col-pago'), pagM, 'var(--s2)', M);
   ['col-rec', 'col-pago'].forEach(function (id) { $(id).insertAdjacentHTML('beforeend', '<p class="muted small">valores em R$ bilhões</p>'); });
   var acc = 0, rows = recM.map(function (r, i) { acc += r - pagM[i]; return '<tr><td>' + M[i] + '</td><td class="r">' + full(r) + '</td><td class="r">' + full(pagM[i]) + '</td><td class="r">' + full(r - pagM[i]) + '</td><td class="r">' + full(acc) + '</td></tr>'; }).join('');
   $('tab-mes').innerHTML = '<div class="tw"><table class="tab"><thead><tr><th>Mês</th><th class="r">Entrou</th><th class="r">Saiu</th><th class="r">Diferença</th><th class="r">Diferença acumulada</th></tr></thead><tbody>' + rows + '<tr><td><b>Total</b></td><td class="r"><b>' + full(sr) + '</b></td><td class="r"><b>' + full(sp) + '</b></td><td class="r"><b>' + full(sr - sp) + '</b></td><td></td></tr></tbody></table></div>';
-})();
+}
+function chips(el, items, cur, cb) {
+  el.innerHTML = items.map(function (y) { return '<button type="button" class="chip" data-y="' + y + '" aria-pressed="' + (y === cur) + '">' + y + (y === 2026 ? ' (até set.)' : '') + '</button>'; }).join('');
+  el.onclick = function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    var y = +b.getAttribute('data-y'); [].forEach.call(el.children, function (c) { c.setAttribute('aria-pressed', c === b); }); cb(y);
+  };
+}
+if (HI) chips($('anos-chips'), YEARS, 2026, function (y) { curYear = y; drawMonths(y); }); else $('anos-chips').style.display = 'none';
+drawMonths(2026);
 
 /* ---------- de onde vem ---------- */
 var NATM = [[/Circula..o de Mercadorias/i, 'ICMS — imposto sobre mercadorias e serviços'], [/Fundo de Participa..o dos Estados/i, 'FPE — repasse da União aos Estados'], [/Fundo de Manuten/i, 'Fundeb — repasses para a educação'],
@@ -179,6 +193,7 @@ function renderOrg() {
     '<p class="small muted">Execução do orçamento autorizado: ' + pct(o.pago, o.aut, 0) + ' pago.</p><div class="prog" role="img" aria-label="' + pct(o.pago, o.aut, 0) + ' do autorizado foi pago"><i style="width:' + Math.min(100, o.aut ? o.pago / o.aut * 100 : 0).toFixed(1) + '%"></i></div>' +
     (frase ? '<p style="margin-top:12px">' + frase + '</p>' : '') +
     '<h4>Quanto gastou em cada mês</h4><div id="o-mes"></div>' +
+    (HI && HI.orgaos[o.c] ? '<h4>Pago em cada ano</h4><div id="o-anos"></div>' : '') +
     (tipoSpend.length ? '<h4>Em que tipo de gasto</h4><div id="o-cat"></div>' : '') +
     (o.fun.length ? '<h4>Áreas de governo</h4><div id="o-fun"></div>' : '') +
     (o.pro.length ? '<h4>Programas</h4><div id="o-pro"></div>' : '') +
@@ -186,6 +201,7 @@ function renderOrg() {
     (o.fon.length ? '<h4>De onde veio o dinheiro (fonte de recurso)</h4><div id="o-fon"></div>' : '') +
     (o.fav.length ? '<h4>Quem mais recebeu deste órgão (' + BRL(o.nfav, 0) + ' favorecidos no total)</h4><div class="tw"><table class="tab"><thead><tr><th>#</th><th>Favorecido</th><th>Tipo</th><th class="r">Recebeu</th><th class="r">% do órgão</th></tr></thead><tbody>' + o.fav.map(function (f, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(f[0].replace(/^PF\d+ - /, '')) + '</td><td>' + esc(f[1]) + '</td><td class="r">' + full(f[2]) + '</td><td class="r">' + pct(f[2], o.pago) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '');
   colsMoney($('o-mes'), o.mes, 'var(--s1)', M);
+  if ($('o-anos')) colsMoney($('o-anos'), HI.orgaos[o.c].concat([o.pago]), 'var(--s7)', YEARS.slice(0, -1).concat(['2026*']).map(String));
   var oc = $('o-cat'); if (oc) hbar(oc, tipoSpend, { total: o.pago });
   [['o-fun', o.fun, 'var(--s1)'], ['o-pro', o.pro, 'var(--s7)'], ['o-ele', o.ele, 'var(--s2)'], ['o-fon', o.fon, 'var(--s3)']].forEach(function (a) {
     var el = $(a[0]); if (el) hbar(el, a[1].map(function (x) { return { label: x[0].replace(/^\d{10,} - /, ''), v: x[1], color: a[2] }; }), { total: o.pago });
@@ -222,13 +238,128 @@ renderList(); renderOrg();
   var list = D.cnpj, shown = 30, filtered = list;
   function draw() {
     var tb = document.querySelector('#tab-forn tbody');
-    tb.innerHTML = filtered.slice(0, shown).map(function (f) { var r = list.indexOf(f) + 1; return '<tr><td>' + r + '</td><td>' + esc(f[0]) + '<br><span class="muted small">' + f[1] + '</span></td><td class="r">' + full(f[2]) + '</td><td class="r">' + f[3] + '</td><td class="small">' + esc(f[4].join(', ')) + '</td></tr>'; }).join('');
+    tb.innerHTML = filtered.slice(0, shown).map(function (f) {
+      var r = list.indexOf(f) + 1, c = CMAP && CMAP[f[1]];
+      var ct = CMAP ? (c ? c[2] + ' · ' + money(c[3]) : '—') : '…';
+      return '<tr><td>' + r + '</td><td>' + esc(f[0]) + '<br><span class="muted small">' + f[1] + '</span></td><td class="r">' + full(f[2]) + '</td><td class="r">' + f[3] + '</td><td class="small">' + esc(f[4].join(', ')) + '</td><td class="r small">' + ct + '</td></tr>';
+    }).join('');
     $('forn-cont').textContent = 'Mostrando ' + Math.min(shown, filtered.length) + ' de ' + BRL(filtered.length, 0);
     $('mais-forn').style.display = shown >= filtered.length ? 'none' : '';
   }
   $('busca-forn').addEventListener('input', function () { var q = norm(this.value); filtered = q ? list.filter(function (f) { return norm(f[0] + ' ' + f[1]).indexOf(q) >= 0; }) : list; shown = 30; draw(); });
   $('mais-forn').addEventListener('click', function () { shown += 50; draw(); });
+  draw(); redrawForn = draw;
+  var keep; printHooks.push({ before: function () { keep = shown; shown = Math.max(shown, 50); draw(); }, after: function () { shown = keep; draw(); } });
+})();
+
+/* ---------- ano a ano ---------- */
+(function () {
+  if (!HI) { $('anos').style.display = 'none'; return; }
+  var ys = YEARS, lab = ys.map(function (y) { return y === 2026 ? '2026*' : String(y); });
+  var recY = ys.map(function (y) { return y === 2026 ? REC.realizada : HI.rec[y][3]; });
+  var pagY = ys.map(function (y) { return y === 2026 ? TOT.pago : HI.tot[y][4]; });
+  var cat26 = [cm['Pessoal e encargos'], cm['Custeio'], cm['Investimentos'], cm['Juros da dívida'] + cm['Inversões financeiras'] + cm['Amortização da dívida']];
+  var catY = ys.map(function (y) { return y === 2026 ? cat26 : HI.cats[y]; });
+  var sum = function (a) { return a.reduce(function (x, y) { return x + y; }, 0); };
+  var n = ys.length - 1, g = function (a, b) { return (a / b - 1) * 100; };
+  $('anos-texto').innerHTML = 'Em <strong>2025</strong>, o Estado arrecadou <strong>' + money(recY[n - 1]) + '</strong> e gastou <strong>' + money(pagY[n - 1]) + '</strong>. Em <strong>2022</strong> foram ' + money(recY[0]) + ' e ' + money(pagY[0]) + ': a arrecadação variou ' + BRL(g(recY[n - 1], recY[0]), 0) + '% e o gasto, ' + BRL(g(pagY[n - 1], pagY[0]), 0) + '% no período, sem corrigir pela inflação. 2026 (marcado com *) vai só até setembro, por isso parece menor.';
+  var mx = Math.max.apply(null, recY.concat(pagY));
+  var bar = function (v, c) { return '<div class="gb"><span class="n">' + BRL(v / 1e9, 1) + '</span><div class="b" style="height:' + (v / mx * 100).toFixed(1) + '%;background:' + c + '"></div></div>'; };
+  $('anos-col').innerHTML = '<div class="cols" role="img" aria-label="Entrou e saiu em cada ano">' + ys.map(function (y, i) {
+    return '<div class="grp" data-tip="<b>' + lab[i] + '</b><br>Entrou: ' + full(recY[i]) + '<br>Saiu: ' + full(pagY[i]) + '">' + bar(recY[i], 'var(--s3)') + bar(pagY[i], 'var(--s2)') + '</div>';
+  }).join('') + '</div><div class="cl">' + lab.map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div><p class="muted small">valores em R$ bilhões · * 2026 até setembro</p>';
+  var cn = ['Pessoal e encargos', 'Custeio', 'Investimentos', 'Dívida e outras'], cc = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s5)'];
+  $('anos-cat').innerHTML = ys.map(function (y, i) {
+    var c = catY[i], t = sum(c);
+    return '<div class="ys"><span>' + lab[i] + '</span><div class="stack sm" role="img" aria-label="Divisão do gasto de ' + y + ' por tipo">' + c.map(function (v, k) {
+      var sh = v / t * 100;
+      return '<div class="seg" style="flex:' + sh.toFixed(2) + ';background:' + cc[k] + '" data-tip="' + cn[k] + ' em ' + lab[i] + ': ' + full(v) + ' (' + BRL(sh, 1) + '% do gasto)">' + (sh >= 7 ? BRL(sh, 0) + '%' : '') + '</div>';
+    }).join('') + '</div></div>';
+  }).join('') + '<p class="muted small">Cada barra soma 100% do gasto do ano. * 2026 até setembro.</p>';
+  $('tab-anos').innerHTML = '<div class="tw"><table class="tab"><thead><tr><th>Ano</th><th class="r">Entrou</th><th class="r">Saiu</th><th class="r">Diferença</th><th class="r">Pessoal</th><th class="r">Investimentos</th></tr></thead><tbody>' + ys.map(function (y, i) {
+    var t = sum(catY[i]);
+    return '<tr><td>' + lab[i] + '</td><td class="r">' + full(recY[i]) + '</td><td class="r">' + full(pagY[i]) + '</td><td class="r">' + full(recY[i] - pagY[i]) + '</td><td class="r">' + pct(catY[i][0], t) + '</td><td class="r">' + pct(catY[i][2], t) + '</td></tr>';
+  }).join('') + '</tbody></table></div>';
+})();
+
+/* ---------- municípios ---------- */
+(function () {
+  var Mn = HI && HI.mun; if (!Mn) { $('municipios').style.display = 'none'; return; }
+  var yr = 2026, TN = ['ICMS', 'IPVA', 'Royalties', 'IPI', 'Recurso extraordinário'], tc = ['var(--s3)', 'var(--s1)', 'var(--s4)', 'var(--s7)', 'var(--s8)'];
+  function data(y) { return Mn.nomes.map(function (n, i) { return { n: n, v: Mn.v[y][i] }; }).sort(function (a, b) { return b.v[5] - a.v[5]; }); }
+  function draw() {
+    var d = data(yr), tot = d.reduce(function (a, x) { return a + x.v[5]; }, 0), q = norm($('busca-mun').value);
+    var man = d.filter(function (x) { return x.n === 'MANAUS'; })[0], p = yr === 2026 ? ' (janeiro a setembro)' : '';
+    $('mun-texto').innerHTML = 'Em <strong>' + yr + '</strong>' + p + ', o Estado repassou <strong>' + money(tot) + '</strong> aos 62 municípios do Amazonas (ICMS, IPVA, royalties e IPI). <strong>Manaus</strong> ficou com ' + money(man.v[5]) + ' (' + pct(man.v[5], tot, 0) + '). Os 5 maiores juntos receberam ' + pct(d.slice(0, 5).reduce(function (a, x) { return a + x.v[5]; }, 0), tot, 0) + ' do total.';
+    hbar($('mun-top'), d.slice(0, 15).map(function (x) { return { label: x.n, v: x.v[5], color: 'var(--s1)' }; }), { total: tot });
+    hbar($('mun-tipo'), TN.map(function (t, k) { return { label: t, v: d.reduce(function (a, x) { return a + x.v[k]; }, 0), color: tc[k] }; }).filter(function (x) { return x.v > 0; }), { total: tot });
+    $('mun-nota').innerHTML = 'Parte do ICMS e do IPVA que o Estado arrecada pertence por lei aos municípios (25% do ICMS; 50% do IPVA dos veículos emplacados no município). O ICMS é dividido por um índice que leva em conta, principalmente, a atividade econômica de cada município, por isso Manaus recebe a maior fatia.';
+    $('tab-mun').querySelector('tbody').innerHTML = d.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) { return !q || norm(o.x.n).indexOf(q) >= 0; }).map(function (o) {
+      return '<tr><td>' + (o.i + 1) + '</td><td>' + esc(o.x.n) + '</td>' + [0, 1, 2, 3, 5].map(function (k) { return '<td class="r">' + full(o.x.v[k]) + '</td>'; }).join('') + '<td class="r">' + pct(o.x.v[5], tot, 2) + '</td></tr>';
+    }).join('');
+  }
+  chips($('mun-chips'), Mn.anos, yr, function (y) { yr = y; draw(); });
+  $('busca-mun').addEventListener('input', draw);
   draw();
+})();
+
+/* ---------- contratos ---------- */
+function initContratos() {
+  var C = window.CONTRATOS; if (!C) return;
+  var sum = function (a) { return a.reduce(function (x, y) { return x + y; }, 0); };
+  CMAP = {}; C.rows.forEach(function (r) { CMAP[r[0]] = r; });
+  if (redrawForn) redrawForn();
+  var nC = sum(C.n), vC = sum(C.tot), yl = C.anos.map(function (a) { return a === '2026' ? '2026 (até out.)' : a; });
+  $('ct-texto').innerHTML = 'De ' + C.anos[0] + ' a ' + C.anos[C.anos.length - 1] + ', os órgãos do Estado registraram <strong>' + BRL(nC, 0) + '</strong> contratos e notas de empenho com empresas e pessoas, num valor inicial somado de <strong>' + money(vC) + '</strong>. Isso é o valor <strong>contratado</strong>, não o valor pago: veja o aviso abaixo da tabela. Dados do Sistema de Gestão de Contratos (SGC), coletados em ' + C.coleta + '.';
+  $('ct-tiles').innerHTML = [['', 'Contratos registrados', BRL(nC, 0), 'Contratos originais e notas de empenho de ' + C.anos[0] + ' a ' + C.anos[C.anos.length - 1] + '.'], ['', 'Valor contratado', money(vC), 'Soma do valor inicial. Aditivos não entram.'], ['', 'Empresas (CNPJ)', BRL(C.ncnpj, 0), 'CNPJ diferentes contratados. Pessoas físicas somam ' + BRL(C.pf[0], 0) + ' contratos (' + money(C.pf[1]) + '), sem nomes aqui.'], ['', 'Ainda em vigor', BRL(C.nvig, 0), BRL(C.nadit, 0) + ' aditivos e prorrogações registrados.']].map(function (t) { return '<div class="tile ' + t[0] + '"><p class="k">' + t[1] + '</p><p class="v">' + t[2] + '</p><p class="d">' + t[3] + '</p></div>'; }).join('');
+  hbar($('ct-ano'), C.anos.map(function (a, i) { return { label: yl[i], v: C.tot[i], tip: BRL(C.n[i], 0) + ' contratos', color: 'var(--s7)' }; }), { total: vC });
+  hbar($('ct-ug'), C.ug.slice(0, 12).map(function (u) { return { label: u[0], v: u[2], tip: BRL(u[1], 0) + ' contratos', color: 'var(--s7)' }; }), { total: vC });
+  var shown = 20, filtered = C.rows, open = {};
+  function draw() {
+    var h = '';
+    filtered.slice(0, shown).forEach(function (r) {
+      var k = r[0];
+      h += '<tr class="click" data-k="' + k + '"><td>' + (C.rows.indexOf(r) + 1) + '</td><td>' + esc(r[1]) + '<br><span class="muted small">' + k + '</span> <span class="ex">' + (open[k] ? '▲ fechar' : '▼ detalhes') + '</span></td><td class="r">' + r[2] + '</td><td class="r">' + full(r[3]) + '</td><td class="r">' + (r[4] ? r[4] + ' · ' + money(r[5]) : '—') + '</td><td class="r">' + r[6] + '</td></tr>';
+      if (open[k]) {
+        h += '<tr class="sub"><td></td><td colspan="5"><b>Por ano de assinatura:</b> ' + C.anos.map(function (a, i) { return r[7][i] ? a + ': ' + money(r[7][i]) : ''; }).filter(Boolean).join(' · ') + '<br><b>Maiores contratos:</b><br>' + r[8].map(function (c) { return c[0] + ' · ' + esc(c[1]) + ' · <b>' + full(c[3]) + '</b>' + (c[4] ? ' · em vigor' : '') + '<br><span class="small">' + esc(c[2]) + '</span>'; }).join('<br>') + '</td></tr>';
+      }
+    });
+    document.querySelector('#tab-ct tbody').innerHTML = h;
+    $('ct-cont').textContent = 'Mostrando ' + Math.min(shown, filtered.length) + ' de ' + BRL(filtered.length, 0) + ' empresas (as de maior valor, com contratos acima de R$ 50 mil ou 3+ contratos)';
+    $('mais-ct').style.display = shown >= filtered.length ? 'none' : '';
+  }
+  $('busca-ct').addEventListener('input', function () { var q = norm(this.value); filtered = q ? C.rows.filter(function (r) { return norm(r[1] + ' ' + r[0]).indexOf(q) >= 0; }) : C.rows; shown = 20; draw(); });
+  $('mais-ct').addEventListener('click', function () { shown += 50; draw(); });
+  document.querySelector('#tab-ct tbody').addEventListener('click', function (e) { var tr = e.target.closest('tr.click'); if (!tr) return; var k = tr.getAttribute('data-k'); open[k] = !open[k]; draw(); });
+  draw();
+  var keep; printHooks.push({ before: function () { keep = shown; shown = Math.max(shown, 40); draw(); }, after: function () { shown = keep; draw(); } });
+}
+(function () {
+  var s = document.createElement('script'); s.src = 'contratos.js'; s.onload = initContratos;
+  s.onerror = function () { $('ct-texto').textContent = 'Não foi possível carregar os contratos agora. Tente recarregar a página.'; };
+  document.body.appendChild(s);
+})();
+
+/* ---------- impressão ---------- */
+(function () {
+  var st = null;
+  function before() {
+    st = { theme: document.documentElement.getAttribute('data-theme'), det: [].map.call(document.querySelectorAll('details'), function (d) { return d.open; }) };
+    document.documentElement.setAttribute('data-theme', 'light');
+    [].forEach.call(document.querySelectorAll('details'), function (d) { d.open = true; });
+    $('print-data').textContent = new Date().toLocaleString('pt-BR');
+    printHooks.forEach(function (h) { h.before(); });
+  }
+  function after() {
+    if (!st) return;
+    printHooks.forEach(function (h) { h.after(); });
+    document.documentElement.setAttribute('data-theme', st.theme || 'light');
+    [].forEach.call(document.querySelectorAll('details'), function (d, i) { d.open = st.det[i]; });
+    st = null;
+  }
+  window.addEventListener('beforeprint', before);
+  window.addEventListener('afterprint', after);
+  $('imprimir').addEventListener('click', function () { window.print(); });
 })();
 
 /* ---------- glossário e tema ---------- */

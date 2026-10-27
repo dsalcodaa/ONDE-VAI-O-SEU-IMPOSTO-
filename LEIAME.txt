@@ -1,10 +1,12 @@
 PARA ONDE VAI O SEU IMPOSTO? — site estático
 
 Arquivos
-  index.html  página única
-  style.css   visual (tema claro/escuro automático e botão de troca)
-  app.js      gráficos e interações (sem bibliotecas externas)
-  data.js     todos os dados (receitas, despesas, órgãos, fornecedores, comissionados)
+  index.html      página única
+  style.css       visual (tema claro/escuro automático, botão de troca e estilo de impressão)
+  app.js          gráficos e interações (sem bibliotecas externas)
+  data.js         dados de 2026, jan–set (receitas, despesas, órgãos, fornecedores, comissionados)
+  historico.js    anos fechados 2022–2025 (totais, mês a mês, tipo de gasto, por órgão) e repasses por município 2022–2026
+  contratos.js    contratos 2022–2026 por CNPJ (carregado depois da página)
 
 Como hospedar
   Basta enviar a pasta inteira para qualquer hospedagem de site estático
@@ -12,12 +14,25 @@ Como hospedar
   Não precisa de banco de dados nem de back-end. Para testar localmente:
     python -m http.server 8000   (dentro da pasta) e abrir http://localhost:8000
 
+Imprimir
+  Botão "Imprimir balanço" no topo. Imprime o resumo, os gráficos, as tabelas e a secretaria
+  que estiver selecionada, sempre em tema claro. Para salvar em PDF, escolha "Salvar como PDF".
+
 Fontes e atualização
-  Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM, exercício 2026, jan–set.
+  Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM. 2026 vai de janeiro a setembro;
+  2022 a 2025 são anos fechados (janeiro a dezembro).
   Folha de comissionados: Portal da Transparência do Estado, setembro/2026.
-  Dados coletados em 27/10/2026. Para atualizar, é preciso gerar um novo data.js
-  (window.DATA = {...}) com a mesma estrutura.
+  Municípios: Sistema de Repartição de Tributos da SEFAZ-AM (Demonstrativo de Transferência
+  Constitucional por Municípios, por data de arrecadação).
+  Contratos: API pública do SGC (sistemas.sefaz.am.gov.br/sgc-am/api/v1/contrato.do).
+  Dados coletados em 27/10/2026. Para atualizar, é preciso gerar novos data.js, historico.js e
+  contratos.js (window.DATA / window.HIST / window.CONTRATOS) com a mesma estrutura.
 
 Observações
   Valores como publicados pelo governo, sem auditoria. O site não indica irregularidades.
   Nomes de servidores não são exibidos (só totais por órgão e cargo).
+  Contratos: o valor somado é o valor INICIAL do contrato ou nota de empenho, não o valor pago;
+  aditivos são só contados, porque alguns têm erros de digitação nos valores.
+  Pessoas físicas contratadas aparecem apenas como total, sem nomes.
+  Municípios: o relatório mostra o que o Estado repassa a cada município, não o que cada
+  município gera de imposto estadual.

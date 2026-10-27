@@ -14,12 +14,14 @@
   <div class="wrap top-in">
     <a class="brand" href="#inicio" aria-label="Para onde vai o seu imposto — início"><span class="dot" aria-hidden="true"></span>Para onde vai o seu imposto?</a>
     <nav aria-label="Seções">
-      <a href="#resumo">Resumo</a><a href="#mes-a-mes">Mês a mês</a><a href="#entra">De onde vem</a><a href="#sai">Para onde vai</a><a href="#secretarias">Secretarias</a><a href="#servidores">Servidores</a><a href="#fornecedores">Quem recebe</a><a href="#glossario">Como ler</a>
+      <a href="#resumo">Resumo</a><a href="#mes-a-mes">Mês a mês</a><a href="#anos">Ano a ano</a><a href="#entra">De onde vem</a><a href="#sai">Para onde vai</a><a href="#secretarias">Secretarias</a><a href="#servidores">Servidores</a><a href="#municipios">Municípios</a><a href="#contratos">Contratos</a><a href="#fornecedores">Quem recebe</a><a href="#glossario">Como ler</a>
     </nav>
+    <button id="imprimir" class="btn-ghost" type="button" aria-label="Imprimir o balanço">Imprimir balanço</button>
     <button id="tema" class="btn-ghost" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
   </div>
 </header>
 
+<div class="print-only" id="print-head"><strong>Para onde vai o seu imposto? · Governo do Amazonas</strong><br>Impresso em <span id="print-data"></span>. Versão online com todas as secretarias: veja o endereço do site.</div>
 <main id="conteudo">
 <section class="hero" id="inicio">
   <div class="wrap">
@@ -43,6 +45,7 @@
 
 <section id="mes-a-mes" class="wrap block">
   <h2>Quanto entra e quanto sai, mês a mês</h2>
+  <div class="chips" id="anos-chips" role="group" aria-label="Escolha o ano"></div>
   <p class="muted" id="mes-texto"></p>
   <div class="card">
     <div id="linha" class="chart"></div>
@@ -53,6 +56,16 @@
     <div class="card"><h3>Saiu dos cofres (por mês)</h3><div id="col-pago"></div></div>
   </div>
   <details class="table-view"><summary>Ver tabela mês a mês</summary><div id="tab-mes"></div></details>
+</section>
+
+<section id="anos" class="wrap block">
+  <h2>Ano a ano: 2022 a 2026</h2>
+  <p class="muted" id="anos-texto"></p>
+  <div class="grid2">
+    <div class="card"><h3>Entrou e saiu em cada ano</h3><div id="anos-col"></div><div class="legend-row"><span><i class="sw" style="background:var(--s3)"></i>Entrou (receita realizada)</span><span><i class="sw" style="background:var(--s2)"></i>Saiu (despesa paga)</span></div></div>
+    <div class="card"><h3>Em que o dinheiro foi gasto, por ano</h3><div id="anos-cat"></div><div class="legend-row"><span><i class="sw" style="background:var(--s1)"></i>Pessoal</span><span><i class="sw" style="background:var(--s2)"></i>Custeio</span><span><i class="sw" style="background:var(--s3)"></i>Investimentos</span><span><i class="sw" style="background:var(--s5)"></i>Dívida e outras</span></div></div>
+  </div>
+  <details class="table-view"><summary>Ver tabela ano a ano</summary><div id="tab-anos"></div></details>
 </section>
 
 <section id="entra" class="wrap block">
@@ -107,6 +120,41 @@
   </div>
 </section>
 
+<section id="municipios" class="wrap block">
+  <h2>Quanto cada município recebe do Estado</h2>
+  <p class="muted" id="mun-texto"></p>
+  <div class="chips" id="mun-chips" role="group" aria-label="Escolha o ano"></div>
+  <div class="grid2">
+    <div class="card"><h3>Os 15 que mais receberam</h3><div id="mun-top"></div></div>
+    <div class="card"><h3>De onde vem o repasse</h3><div id="mun-tipo"></div><div class="note" id="mun-nota"></div></div>
+  </div>
+  <div class="card">
+    <h3>Todos os 62 municípios</h3>
+    <label class="lab" for="busca-mun">Buscar município</label>
+    <input id="busca-mun" type="search" placeholder="Ex.: Parintins, Tefé…" autocomplete="off">
+    <div class="tw"><table class="tab" id="tab-mun"><thead><tr><th>#</th><th>Município</th><th class="r">ICMS</th><th class="r">IPVA</th><th class="r">Royalties</th><th class="r">IPI</th><th class="r">Total</th><th class="r">% do total</th></tr></thead><tbody></tbody></table></div>
+    <p class="muted small">Fonte: Sistema de Repartição de Tributos (SEFAZ-AM), relatório “Demonstrativo de Transferência Constitucional por Municípios”, por data de arrecadação. Este relatório mostra o que o Estado <strong>repassa</strong> a cada município; ele não informa quanto cada município gera de imposto estadual. Valores como publicados pelo portal.</p>
+  </div>
+</section>
+
+<section id="contratos" class="wrap block">
+  <h2>Contratos do Estado</h2>
+  <p class="muted" id="ct-texto">Carregando contratos…</p>
+  <div class="tiles" id="ct-tiles"></div>
+  <div class="grid2">
+    <div class="card"><h3>Valor dos contratos assinados, por ano</h3><div id="ct-ano"></div></div>
+    <div class="card"><h3>Órgãos que mais contrataram</h3><div id="ct-ug"></div></div>
+  </div>
+  <div class="card">
+    <h3>Quem mais tem contratos com o Estado</h3>
+    <label class="lab" for="busca-ct">Buscar por nome ou CNPJ</label>
+    <input id="busca-ct" type="search" placeholder="Ex.: construtora, hospital, 00.000.000…" autocomplete="off">
+    <div class="tw"><table class="tab" id="tab-ct"><thead><tr><th>#</th><th>Empresa (CNPJ)</th><th class="r">Contratos</th><th class="r">Valor contratado</th><th class="r">Em vigor</th><th class="r">Aditivos</th></tr></thead><tbody></tbody></table></div>
+    <div class="row-actions"><button id="mais-ct" class="btn" type="button">Mostrar mais</button><span class="muted small" id="ct-cont"></span></div>
+    <p class="muted small">Clique em uma linha para ver os maiores contratos da empresa. Valor contratado é o valor <strong>inicial</strong> dos contratos e notas de empenho registrados no Sistema de Gestão de Contratos (SGC). Não é o que foi pago: um contrato pode durar anos, ser reduzido ou rescindido, e os aditivos (prorrogações e acréscimos) <strong>não</strong> estão somados, só contados. Os valores são os informados pelos órgãos e podem conter erros de digitação.</p>
+  </div>
+</section>
+
 <section id="fornecedores" class="wrap block">
   <h2>Quem mais recebe do Estado</h2>
   <p class="muted" id="forn-texto"></p>
@@ -118,7 +166,7 @@
     <h3>Empresas e instituições (CNPJ) que mais receberam</h3>
     <label class="lab" for="busca-forn">Buscar por nome ou CNPJ</label>
     <input id="busca-forn" type="search" placeholder="Ex.: construtora, banco, 00.000.000…" autocomplete="off">
-    <div class="tw"><table class="tab" id="tab-forn"><thead><tr><th>#</th><th>Empresa / instituição</th><th class="r">Recebeu (jan–set)</th><th class="r">Órgãos que pagaram</th><th>Principais pagadores</th></tr></thead><tbody></tbody></table></div>
+    <div class="tw"><table class="tab" id="tab-forn"><thead><tr><th>#</th><th>Empresa / instituição</th><th class="r">Recebeu (jan–set)</th><th class="r">Órgãos que pagaram</th><th>Principais pagadores</th><th class="r">Contratos 2022–26</th></tr></thead><tbody></tbody></table></div>
     <div class="row-actions"><button id="mais-forn" class="btn" type="button">Mostrar mais</button><span class="muted small" id="forn-cont"></span></div>
     <p class="muted small">Bancos, previdência, INSS e agências de fomento aparecem porque o Estado transfere dinheiro a elas (dívida, contribuições, repasses). Isso não é compra de bens e serviços.</p>
   </div>
@@ -139,6 +187,8 @@
     <ul class="plain">
       <li>Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM (sistemas.sefaz.am.gov.br/transparencia), exercício de 2026, janeiro a setembro, dados atualizados em <span class="at"></span>.</li>
       <li>Folha de pessoal: Portal da Transparência do Estado (transparencia.am.gov.br), setembro de 2026.</li>
+      <li>Anos anteriores (2022 a 2025): mesmos relatórios de despesas e receitas da SEFAZ, ano fechado. 2026 vai até setembro.</li>
+      <li>Municípios: Sistema de Repartição de Tributos da SEFAZ-AM. Contratos: API pública do Sistema de Gestão de Contratos (SGC) da SEFAZ-AM.</li>
       <li>Os valores são os publicados pelo governo, sem auditoria. Este site não aponta irregularidades: mostra, em linguagem simples, o que o governo informa.</li>
       <li>Valores em reais. “Bi” = bilhões, “mi” = milhões. Pagamentos de anos anteriores (restos a pagar) não entram no “pago” do ano.</li>
     </ul>
@@ -151,6 +201,7 @@
 </footer>
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <script src="data.js"></script>
+<script src="historico.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
