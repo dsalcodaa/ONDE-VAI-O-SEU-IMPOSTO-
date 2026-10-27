@@ -1,0 +1,23 @@
+PARA ONDE VAI O SEU IMPOSTO? — site estático
+
+Arquivos
+  index.html  página única
+  style.css   visual (tema claro/escuro automático e botão de troca)
+  app.js      gráficos e interações (sem bibliotecas externas)
+  data.js     todos os dados (receitas, despesas, órgãos, fornecedores, comissionados)
+
+Como hospedar
+  Basta enviar a pasta inteira para qualquer hospedagem de site estático
+  (GitHub Pages, Netlify, Cloudflare Pages, Vercel, servidor Apache/Nginx).
+  Não precisa de banco de dados nem de back-end. Para testar localmente:
+    python -m http.server 8000   (dentro da pasta) e abrir http://localhost:8000
+
+Fontes e atualização
+  Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM, exercício 2026, jan–set.
+  Folha de comissionados: Portal da Transparência do Estado, setembro/2026.
+  Dados coletados em 27/10/2026. Para atualizar, é preciso gerar um novo data.js
+  (window.DATA = {...}) com a mesma estrutura.
+
+Observações
+  Valores como publicados pelo governo, sem auditoria. O site não indica irregularidades.
+  Nomes de servidores não são exibidos (só totais por órgão e cargo).

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Para onde vai o seu imposto? · Governo do Amazonas</title>
+<meta name="description" content="Quanto o Governo do Amazonas arrecada, quanto gasta, em quê, e quem mais recebe — explicado de forma simples, com dados oficiais do Portal da Transparência.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#inicio" aria-label="Para onde vai o seu imposto — início"><span class="dot" aria-hidden="true"></span>Para onde vai o seu imposto?</a>
+    <nav aria-label="Seções">
+      <a href="#resumo">Resumo</a><a href="#mes-a-mes">Mês a mês</a><a href="#entra">De onde vem</a><a href="#sai">Para onde vai</a><a href="#secretarias">Secretarias</a><a href="#servidores">Servidores</a><a href="#fornecedores">Quem recebe</a><a href="#glossario">Como ler</a>
+    </nav>
+    <button id="tema" class="btn-ghost" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+  </div>
+</header>
+
+<main id="conteudo">
+<section class="hero" id="inicio">
+  <div class="wrap">
+    <p class="eyebrow">Governo do Estado do Amazonas · <span id="periodo"></span></p>
+    <h1>Para onde vai o <em>seu imposto</em>?</h1>
+    <p class="lead" id="lead"></p>
+    <p class="muted small">Dados oficiais do Portal da Transparência do Estado. Atualizados em <span id="atualizado"></span>. <a href="#glossario">Como ler os números</a></p>
+  </div>
+</section>
+
+<section id="resumo" class="wrap block">
+  <h2>O resumo em 4 números</h2>
+  <div class="tiles" id="tiles"></div>
+  <div class="card">
+    <h3>A cada R$ 100 que o Estado gastou, para onde foram?</h3>
+    <p class="muted">Cada faixa mostra a área de governo (função). Passe o mouse ou toque para ver o valor.</p>
+    <div id="cem"></div>
+    <ul class="legend" id="cem-leg"></ul>
+  </div>
+</section>
+
+<section id="mes-a-mes" class="wrap block">
+  <h2>Quanto entra e quanto sai, mês a mês</h2>
+  <p class="muted" id="mes-texto"></p>
+  <div class="card">
+    <div id="linha" class="chart"></div>
+    <div class="legend-row" id="linha-leg"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Entrou nos cofres (por mês)</h3><div id="col-rec"></div></div>
+    <div class="card"><h3>Saiu dos cofres (por mês)</h3><div id="col-pago"></div></div>
+  </div>
+  <details class="table-view"><summary>Ver tabela mês a mês</summary><div id="tab-mes"></div></details>
+</section>
+
+<section id="entra" class="wrap block">
+  <h2>De onde vem o dinheiro</h2>
+  <p class="muted">Receita realizada: o que de fato entrou, já descontadas as deduções (em geral, a contribuição do Estado ao Fundeb).</p>
+  <div class="grid2">
+    <div class="card"><h3>Por tipo de receita</h3><div id="origem"></div></div>
+    <div class="card"><h3>As maiores fontes, uma a uma</h3><div id="natureza"></div></div>
+  </div>
+  <div class="note" id="entra-nota"></div>
+</section>
+
+<section id="sai" class="wrap block">
+  <h2>Para onde vai o dinheiro</h2>
+  <div class="grid2">
+    <div class="card"><h3>Por área de governo</h3><p class="muted small">O que cada área recebeu (valor pago).</p><div id="funcoes"></div></div>
+    <div class="card"><h3>Por tipo de gasto</h3><p class="muted small">Em que o dinheiro foi gasto, seja qual for a área.</p><div id="cats"></div><div class="note" id="cats-nota"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Em que se gasta, em detalhe</h3><p class="muted small">Os 15 maiores itens (elemento de despesa).</p><div id="elementos"></div></div>
+    <div class="card"><h3>Programas de governo</h3><p class="muted small">Os 15 programas que mais receberam.</p><div id="programas"></div></div>
+  </div>
+</section>
+
+<section id="secretarias" class="wrap block">
+  <h2>Gastos por secretaria e órgão</h2>
+  <p class="muted">Escolha uma secretaria para ver quanto ela gastou, em quê, e quem recebeu.</p>
+  <div class="grid-sec">
+    <div class="card">
+      <label class="lab" for="busca-org">Buscar secretaria ou órgão</label>
+      <input id="busca-org" type="search" placeholder="Ex.: educação, saúde, polícia…" autocomplete="off">
+      <ol class="org-list" id="org-list"></ol>
+    </div>
+    <div id="org-detalhe" class="card" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="servidores" class="wrap block">
+  <h2>Quanto se gasta com servidores</h2>
+  <div class="grid2">
+    <div class="card"><h3>Pessoal e encargos no total</h3><div id="pessoal-total"></div></div>
+    <div class="card"><h3>Onde pesa mais a folha</h3><p class="muted small">Os 12 órgãos que mais pagaram com pessoal.</p><div id="pessoal-org"></div></div>
+  </div>
+  <div class="card">
+    <h3>Cargos de confiança (comissionados)</h3>
+    <p class="muted" id="com-texto"></p>
+    <div class="grid2">
+      <div><h4>Gasto mensal por órgão</h4><div id="com-org"></div></div>
+      <div><h4>Cargos mais comuns</h4><div id="com-cargos"></div><h4>Quando foram admitidos</h4><div id="com-anos"></div></div>
+    </div>
+    <p class="muted small">Mostramos apenas totais por órgão e cargo, sem nomes de pessoas. A lista nominal é pública no Portal da Transparência do Estado, na seção Pessoal.</p>
+  </div>
+</section>
+
+<section id="fornecedores" class="wrap block">
+  <h2>Quem mais recebe do Estado</h2>
+  <p class="muted" id="forn-texto"></p>
+  <div class="grid2">
+    <div class="card"><h3>Para quem vai o dinheiro</h3><div id="tipos"></div><div class="note">Boa parte do que o portal chama de “favorecido” não é fornecedor: é a folha de pagamento, as aposentadorias e a parte do ICMS repassada aos municípios.</div></div>
+    <div class="card"><h3>Pessoal e repasses (maiores)</h3><div id="genericos"></div></div>
+  </div>
+  <div class="card">
+    <h3>Empresas e instituições (CNPJ) que mais receberam</h3>
+    <label class="lab" for="busca-forn">Buscar por nome ou CNPJ</label>
+    <input id="busca-forn" type="search" placeholder="Ex.: construtora, banco, 00.000.000…" autocomplete="off">
+    <div class="tw"><table class="tab" id="tab-forn"><thead><tr><th>#</th><th>Empresa / instituição</th><th class="r">Recebeu (jan–set)</th><th class="r">Órgãos que pagaram</th><th>Principais pagadores</th></tr></thead><tbody></tbody></table></div>
+    <div class="row-actions"><button id="mais-forn" class="btn" type="button">Mostrar mais</button><span class="muted small" id="forn-cont"></span></div>
+    <p class="muted small">Bancos, previdência, INSS e agências de fomento aparecem porque o Estado transfere dinheiro a elas (dívida, contribuições, repasses). Isso não é compra de bens e serviços.</p>
+  </div>
+</section>
+
+<section id="glossario" class="wrap block">
+  <h2>Como ler os números</h2>
+  <div class="grid3">
+    <div class="card"><h3>Orçamento (LOA)</h3><p>É o plano do ano, aprovado pela Assembleia: <strong id="g-loa"></strong> de receita prevista e despesa autorizada no início de 2026.</p></div>
+    <div class="card"><h3>Empenhado</h3><p>O governo <strong>reservou</strong> o dinheiro para uma despesa (como um contrato assinado).</p></div>
+    <div class="card"><h3>Liquidado</h3><p>O serviço foi <strong>entregue e conferido</strong>; já existe a obrigação de pagar.</p></div>
+    <div class="card"><h3>Pago</h3><p>O dinheiro <strong>saiu do cofre</strong>. É o número que mais usamos aqui.</p></div>
+    <div class="card"><h3>Receita realizada</h3><p>O que <strong>de fato entrou</strong>, depois das deduções (por exemplo, a parte do Fundeb).</p></div>
+    <div class="card"><h3>Encargos especiais</h3><p>Dívida, repasses obrigatórios aos municípios e outras despesas que não pertencem a uma área específica, como saúde ou educação.</p></div>
+  </div>
+  <div class="card">
+    <h3>Fontes e cuidados</h3>
+    <ul class="plain">
+      <li>Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM (sistemas.sefaz.am.gov.br/transparencia), exercício de 2026, janeiro a setembro, dados atualizados em <span class="at"></span>.</li>
+      <li>Folha de pessoal: Portal da Transparência do Estado (transparencia.am.gov.br), setembro de 2026.</li>
+      <li>Os valores são os publicados pelo governo, sem auditoria. Este site não aponta irregularidades: mostra, em linguagem simples, o que o governo informa.</li>
+      <li>Valores em reais. “Bi” = bilhões, “mi” = milhões. Pagamentos de anos anteriores (restos a pagar) não entram no “pago” do ano.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap"><p>Feito com dados públicos. Dados: <span class="at"></span>. Use e compartilhe à vontade.</p></div>
+</footer>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
