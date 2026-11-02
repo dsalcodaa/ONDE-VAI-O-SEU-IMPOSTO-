@@ -370,9 +370,9 @@ async function pFornecedor(cn) {
   const tot = i => rows.reduce((a, r) => a + r[i], 0);
   const vct = f.contratos.filter(c => !c[3]).reduce((a, c) => a + c[5], 0);
   APP.innerHTML = head(esc(f.nome || doc), `CNPJ ${esc(doc)}`, `<a href="#/fornecedores">Empresas</a> › ${esc(doc)}`) + `<section class="wrap block">
-    <div class="kv"><div><span class="k">Total pago (2019–2026)</span><span class="v">${R(tot(4) + tot(5))}</span></div><div><span class="k">Pago do ano</span><span class="v">${R(tot(4))}</span></div><div><span class="k">Pago de anos anteriores</span><span class="v">${R(tot(5))}</span></div>
-    <div><span class="k">Entregue (liquidado)</span><span class="v">${R(tot(3))}</span></div><div><span class="k">Órgãos</span><span class="v">${N(new Set(rows.map(r => r[1])).size)}</span></div>
-    <div><span class="k">Contratos originais</span><span class="v">${N(f.contratos.filter(c => !c[3]).length)} · ${R(vct)}</span></div><div><span class="k">Contas antigas pagas (DEA)</span><span class="v">${R(f.dea.reduce((a, x) => a + x[3], 0))}</span></div></div>
+    <div class="kv"><div><span class="k">Total pago (2019–2026)</span><span class="v">${R(tot(4) + tot(5))}</span></div><div><span class="k">Pago do ano (soma 2019–2026)</span><span class="v">${R(tot(4))}</span></div><div><span class="k">Pago de anos anteriores (soma 2019–2026)</span><span class="v">${R(tot(5))}</span></div>
+    <div><span class="k">Entregue (soma 2019–2026)</span><span class="v">${R(tot(3))}</span></div><div><span class="k">Órgãos</span><span class="v">${N(new Set(rows.map(r => r[1])).size)}</span></div>
+    <div><span class="k">Contratos registrados (SGC/TCE)</span><span class="v">${N(f.contratos.filter(c => !c[3]).length)} · ${R(vct)}</span></div><div><span class="k">Contas antigas pagas – DEA (2019–2026)</span><span class="v">${R(f.dea.reduce((a, x) => a + x[3], 0))}</span></div></div>
     <div class="card"><h3>Calendário de pagamentos</h3><p class="muted">Em que mês e ano a empresa recebeu, somando todos os órgãos.</p>${calendario(f.mes)}</div>
     ${anos.length ? `<div class="card"><h3>Pago por ano</h3>${cols(anos.map(y => [YL(y), f.anos[y].reduce((a, r) => a + r[3] + r[4], 0)]), { color: "var(--s3)" })}</div>` : ""}
     <h3>Por órgão e ano</h3><div id="fo-t"></div><h3 style="margin-top:28px">Contratos</h3><div id="fo-c"></div>
