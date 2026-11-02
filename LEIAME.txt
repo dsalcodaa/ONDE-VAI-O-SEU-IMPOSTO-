@@ -1,38 +1,37 @@
-PARA ONDE VAI O SEU IMPOSTO? — site estático
+PARA ONDE VAI O SEU IMPOSTO? 2.0 — Governo do Amazonas 2019–2026 (site estático)
 
-Arquivos
-  index.html      página única
-  style.css       visual (tema claro/escuro automático, botão de troca e estilo de impressão)
-  app.js          gráficos e interações (sem bibliotecas externas)
-  data.js         dados de 2026, jan–set (receitas, despesas, órgãos, fornecedores, comissionados)
-  historico.js    anos fechados 2022–2025 (totais, mês a mês, tipo de gasto, por órgão) e repasses por município 2022–2026
-  contratos.js    contratos 2022–2026 por CNPJ (carregado depois da página)
+Como abrir
+  O site lê os dados da pasta data/ e precisa de um servidor local (o navegador bloqueia leitura
+  direta de arquivos). Dentro desta pasta:
+      python -m http.server 8000
+  e abra http://localhost:8000
 
-Como hospedar
-  Basta enviar a pasta inteira para qualquer hospedagem de site estático
-  (GitHub Pages, Netlify, Cloudflare Pages, Vercel, servidor Apache/Nginx).
-  Não precisa de banco de dados nem de back-end. Para testar localmente:
-    python -m http.server 8000   (dentro da pasta) e abrir http://localhost:8000
+Como publicar
+  Envie a pasta inteira para qualquer hospedagem estática (GitHub Pages, Netlify, Cloudflare Pages,
+  Vercel, Apache/Nginx). Não precisa de banco de dados nem de back-end.
 
-Imprimir
-  Botão "Imprimir balanço" no topo. Imprime o resumo, os gráficos, as tabelas e a secretaria
-  que estiver selecionada, sempre em tema claro. Para salvar em PDF, escolha "Salvar como PDF".
+Páginas
+  Início (com calendário de pagamentos) · Em que gasta · De onde vem · Poderes · Órgãos (158, cada um com credores, contratos,
+  aditivos, DEA, Diário Oficial e PNCP) · Empresas (cada CNPJ com pagamentos por órgão, calendário mês a mês e contratos) · Ranking ·
+  Contratos (todos, com filtros) · Transição (liquidado e não pago, DEA, reconhecimento de dívida,
+  dívida pública, contratos após 2026) · Leis · Municípios · Servidores · Como ler.
+  Toda tabela tem busca, ordenação por coluna e botão "Baixar CSV".
 
-Fontes e atualização
-  Despesas e receitas: Portal da Transparência Fiscal da SEFAZ-AM. 2026 vai de janeiro a setembro;
-  2022 a 2025 são anos fechados (janeiro a dezembro).
-  Folha de comissionados: Portal da Transparência do Estado, setembro/2026.
-  Municípios: Sistema de Repartição de Tributos da SEFAZ-AM (Demonstrativo de Transferência
-  Constitucional por Municípios, por data de arrecadação).
-  Contratos: API pública do SGC (sistemas.sefaz.am.gov.br/sgc-am/api/v1/contrato.do).
-  Dados coletados em 27/10/2026. Para atualizar, é preciso gerar novos data.js, historico.js e
-  contratos.js (window.DATA / window.HIST / window.CONTRATOS) com a mesma estrutura.
+Dados (data/)
+  geral.json        totais por ano, mês, função, programa, fonte, Poder, LRF, DEA, municípios, leis, folha
+  orgaos.json       lista de órgãos com execução por ano
+  orgao/<UG>.json   tudo de um órgão
+  fornecedores.json índice de empresas; fornecedor/<2 dígitos>.json detalhes por CNPJ
+  contratos.json    índice de contratos; leis.json; doe_divida.json
+  Gerados por build_site.py (pasta scripts do projeto NEX_BALANCO_TRANSICAO_AMAZONAS) a partir de
+  04_BASE_DADOS/nex_amazonas.db e das coletas.
 
-Observações
-  Valores como publicados pelo governo, sem auditoria. O site não indica irregularidades.
-  Nomes de servidores não são exibidos (só totais por órgão e cargo).
-  Contratos: o valor somado é o valor INICIAL do contrato ou nota de empenho, não o valor pago;
-  aditivos são só contados, porque alguns têm erros de digitação nos valores.
-  Pessoas físicas contratadas aparecem apenas como total, sem nomes.
-  Municípios: o relatório mostra o que o Estado repassa a cada município, não o que cada
-  município gera de imposto estadual.
+Atualização
+  NEX_BALANCO_TRANSICAO_AMAZONAS/ATUALIZAR.bat roda scripts/atualizar.py: coleta de novo o ano corrente
+  (SEFAZ, Diário Oficial, PNCP), gera o PDF e o site e publica no GitHub. Agendado no Windows
+  (tarefa "NEX - Atualizar Para onde vai o seu imposto"). Log em 03_DADOS_BRUTOS/logs/.
+
+Regras
+  Valores nominais, como publicados, sem auditoria. 2026 parcial (até a data da coleta, mostrada na página inicial).
+  Contratado, empenhado e pago não se somam. TCE, MP e Defensoria são órgãos autônomos, não Poderes.
+  Pessoas físicas sem nome. O site não aponta irregularidades.
