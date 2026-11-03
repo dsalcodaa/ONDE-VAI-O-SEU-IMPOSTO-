@@ -237,3 +237,9 @@ details.more summary{cursor:pointer;color:var(--accent);font-weight:600;margin:8
 .cal td.t,.cal tfoot td{font-weight:700;background:none}
 details.card summary{cursor:pointer}
 .chk{display:flex;gap:8px;align-items:flex-start;margin:4px 0 18px;color:var(--ink2)}
+
+/* quanto o governo deve */
+.card.deve{border-left:4px solid var(--s2)}
+.deve-v{font-size:1.9rem;font-weight:800;color:var(--s2);margin:4px 0 6px;white-space:nowrap}
+.kv .kv-deve{outline:2px solid var(--s2);outline-offset:-2px}
+.kv .kv-deve .v{color:var(--s2)}

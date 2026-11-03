@@ -370,13 +370,42 @@ async function pFornecedor(cn) {
   const tot = i => rows.reduce((a, r) => a + r[i], 0);
   const vct = f.contratos.filter(c => !c[3]).reduce((a, c) => a + c[5], 0);
   APP.innerHTML = head(esc(f.nome || doc), `CNPJ ${esc(doc)}`, `<a href="#/fornecedores">Empresas</a> › ${esc(doc)}`) + `<section class="wrap block">
-    <div class="kv"><div><span class="k">Total pago (2019–2026)</span><span class="v">${R(tot(4) + tot(5))}</span></div><div><span class="k">Pago do ano (soma 2019–2026)</span><span class="v">${R(tot(4))}</span></div><div><span class="k">Pago de anos anteriores (soma 2019–2026)</span><span class="v">${R(tot(5))}</span></div>
+    <div class="kv"><div class="kv-deve"><span class="k">Quanto o governo deve (2026)</span><span class="v">${R((f.deve || []).reduce((a, r) => a + r[3], 0))}</span></div><div><span class="k">Total pago (2019–2026)</span><span class="v">${R(tot(4) + tot(5))}</span></div><div><span class="k">Pago do ano (soma 2019–2026)</span><span class="v">${R(tot(4))}</span></div><div><span class="k">Pago de anos anteriores (soma 2019–2026)</span><span class="v">${R(tot(5))}</span></div>
     <div><span class="k">Entregue (soma 2019–2026)</span><span class="v">${R(tot(3))}</span></div><div><span class="k">Órgãos</span><span class="v">${N(new Set(rows.map(r => r[1])).size)}</span></div>
     <div><span class="k">Contratos registrados (SGC/TCE)</span><span class="v">${N(f.contratos.filter(c => !c[3]).length)} · ${R(vct)}</span></div><div><span class="k">Contas antigas pagas – DEA (2019–2026)</span><span class="v">${R(f.dea.reduce((a, x) => a + x[3], 0))}</span></div></div>
+    <div class="card deve" id="fo-deve"></div>
     <div class="card"><h3>Calendário de pagamentos</h3><p class="muted">Em que mês e ano a empresa recebeu, somando todos os órgãos.</p>${calendario(f.mes)}</div>
     ${anos.length ? `<div class="card"><h3>Pago por ano</h3>${cols(anos.map(y => [YL(y), f.anos[y].reduce((a, r) => a + r[3] + r[4], 0)]), { color: "var(--s3)" })}</div>` : ""}
     <h3>Por órgão e ano</h3><div id="fo-t"></div><h3 style="margin-top:28px">Contratos</h3><div id="fo-c"></div>
     ${f.dea.length ? `<h3 style="margin-top:28px">Contas antigas pagas (DEA)</h3><div id="fo-d"></div>` : ""}${nota26f()}</section>`;
+  // ---- quanto o governo deve
+  const deve = f.deve || [], doe = f.doe || [];
+  const totDeve = deve.reduce((a, r) => a + r[3], 0);
+  const virada = anos.filter(y => +y < PARCIAL).map(y => {
+    const v = f.anos[y], liq = v.reduce((a, r) => a + r[2], 0), pg = v.reduce((a, r) => a + r[3], 0);
+    const prox = f.anos[+y + 1] ? f.anos[+y + 1].reduce((a, r) => a + r[4], 0) : 0;
+    return [+y, liq, pg, liq - pg, prox];
+  });
+  const doeSoma = doe.filter(r => !r[5]).reduce((a, r) => a + (r[4] || 0), 0);
+  $("#fo-deve").innerHTML = `<h3>Quanto o governo deve</h3>
+    <p class="deve-v">${R(totDeve)}</p>
+    <p class="muted">Serviço, obra ou produto que o órgão <b>já conferiu como entregue em 2026 e ainda não pagou</b> (até ${DC}).
+      Pode ser pago até 31/12/2026; o que sobrar passa para 2027 e, quando pago, aparece como "pago de anos anteriores".</p>
+    ${deve.length ? `<div id="dv-org"></div>` : `<p><b>Nada entregue e não pago em 2026</b> para esta empresa até ${DC}.</p>`}
+    <details style="margin-top:14px"><summary><b>O que ficou para pagar na virada de cada ano</b> <span class="muted small">(clique para abrir)</span></summary>
+      <p class="muted small">Entregue no ano e não pago até 31/12. Esse valor costuma ser pago no ano seguinte, como "pago de anos anteriores" (última coluna, para comparar).
+      A fonte não informa quanto disso ainda está em aberto hoje.</p><div id="dv-ano"></div></details>
+    ${doe.length ? `<details style="margin-top:10px"><summary><b>Dívidas reconhecidas no Diário Oficial com este CNPJ</b>: ${N(doe.length)} atos, ${R(doeSoma)} sem repetidos</summary>
+      <p class="muted small">Ato em que o órgão admite que deve por serviço prestado sem contrato válido ou fora do prazo. Valor lido do texto do ato por regra automática: confira no link.
+      Pode já ter sido pago depois.</p><div id="dv-doe"></div></details>` : ""}`;
+  if (deve.length) tabela($("#dv-org"), deve, [{ t: "Órgão", k: r => (ORGMAP[r[0]] || {}).sigla || r[0], f: (v, r) => orgLink(r[0]), w: "wrap" },
+    cR("Entregue em 2026", 1), cR("Pago em 2026", 2), cR("Falta pagar", 3)], { busca: false, ordem: [3, -1], nome: `empresa_${cn}_deve`, total: [null, sumF(1), sumF(2), sumF(3)] });
+  tabela($("#dv-ano"), virada, [{ t: "Ano", k: 0 }, cR("Entregue no ano", 1), cR("Pago do ano", 2), cR("Ficou para o ano seguinte", 3), cR("Pago de anos anteriores no ano seguinte", 4)],
+    { busca: false, ordem: [0, 1], nome: `empresa_${cn}_virada` });
+  if (doe.length) tabela($("#dv-doe"), doe, [{ t: "Data", k: 0, f: v => DBR(v) }, { t: "Órgão", k: r => (ORGMAP[r[1]] || {}).sigla || r[2], f: (v, r) => r[1] ? orgLink(r[1]) : esc(r[2]), w: "wrap" },
+    { t: "Ato", k: 3, w: "wrap", f: (v, r) => esc(v) + (r[5] ? ' <span class="badge">repetido</span>' : "") }, cR("Valor (lido do texto)", 4),
+    { t: "Link", k: 6, f: v => `<a href="${esc(v)}" target="_blank" rel="noopener">abrir</a>` }], { busca: false, pag: 20, nome: `empresa_${cn}_diario_oficial` });
+
   tabela($("#fo-t"), rows, [{ t: "Ano", k: 0, f: v => YL(v) }, { t: "Órgão", k: r => (ORGMAP[r[1]] || {}).sigla || r[1], f: (v, r) => orgLink(r[1]), w: "wrap" }, cR("Reservado (empenho)", 2), cR("Entregue (liquidado)", 3), cR("Pago do ano", 4), cR("Pago de anos anteriores", 5)],
     { ordem: [0, -1], nome: `empresa_${cn}_orgaos`, total: [null, null, sumF(2), sumF(3), sumF(4), sumF(5)] });
   tabela($("#fo-c"), f.contratos, [{ t: "Órgão", k: r => (ORGMAP[r[0]] || {}).sigla || r[0], f: (v, r) => `<a href="#/orgao/${r[0]}">${esc(v)}</a>` }, { t: "Nº", k: 1, f: (v, r) => (r[3] ? "› " : "") + esc(v) }, { t: "Ano", k: 2 },
