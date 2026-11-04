@@ -434,7 +434,7 @@ async function pFornecedores() {
     `<section class="wrap block"><div id="f-tab"></div><p class="note">Total pago = pago do ano mais o pago de anos anteriores, somado de 2019 a 2026 (2026 até ${DC}). Pessoas físicas não aparecem aqui. Órgãos públicos com CNPJ (Amazonprev, INSS, bancos, prefeituras) aparecem porque recebem repasses e retenções.</p></section>`;
   tabela($("#f-tab"), FIDX, [
     { t: "Empresa", k: 1, f: (v, r) => `<a href="#/fornecedor/${dig(r[0])}"><b>${esc(v)}</b></a>`, w: "wrap" }, { t: "CNPJ", k: 0 },
-    cR("Total pago 2019–2026", 2), cR("Entregue 2019–2026", 3), { t: "Órgãos", k: 4, r: 1, f: v => N(v) }, cR("Valor de contratos originais", 5), { t: "Contratos", k: 6, r: 1, f: v => N(v) },
+    cR("Total pago 2019–2026", 2), cR("Entregue 2019–2026", 3), { t: "Órgãos", k: 4, r: 1, f: v => N(v) }, cR("Valor de contratos originais", 5, { f: (v, r) => r[6] ? esc(R(v)) : "–" }), { t: "Contratos", k: 6, r: 1, f: v => v ? N(v) : "nenhum no SGC/TCE" },
     { t: "Anos com pagamento", k: r => r[7].join(", ") },
   ], { ordem: [2, -1], nome: "empresas" });
 }
@@ -449,7 +449,7 @@ async function pFornecedor(cn) {
   APP.innerHTML = head(esc(f.nome || doc), `CNPJ ${esc(doc)}`, `<a href="#/fornecedores">Empresas</a> › ${esc(doc)}`) + `<section class="wrap block">
     <div class="kv"><div class="kv-deve"><span class="k">Quanto o governo deve (2026)</span><span class="v">${R((f.deve || []).reduce((a, r) => a + r[3], 0))}</span></div><div><span class="k">Total pago (2019–2026)</span><span class="v">${R(tot(4) + tot(5))}</span></div><div><span class="k">Pago do ano (soma 2019–2026)</span><span class="v">${R(tot(4))}</span></div><div><span class="k">Pago de anos anteriores (soma 2019–2026)</span><span class="v">${R(tot(5))}</span></div>
     <div><span class="k">Entregue (soma 2019–2026)</span><span class="v">${R(tot(3))}</span></div><div><span class="k">Órgãos</span><span class="v">${N(new Set(rows.map(r => r[1])).size)}</span></div>
-    <div><span class="k">Contratos registrados (SGC/TCE)</span><span class="v">${N(f.contratos.filter(c => !c[3]).length)} · ${R(vct)}</span></div><div><span class="k">Contas antigas pagas – DEA (2019–2026)</span><span class="v">${R(f.dea.reduce((a, x) => a + x[3], 0))}</span></div></div>
+    <div><span class="k">Contratos registrados (SGC/TCE)</span><span class="v">${f.contratos.some(c => !c[3]) ? `${N(f.contratos.filter(c => !c[3]).length)} · ${R(vct)}` : "nenhum contrato registrado no SGC/TCE"}</span></div><div><span class="k">Contas antigas pagas – DEA (2019–2026)</span><span class="v">${R(f.dea.reduce((a, x) => a + x[3], 0))}</span></div></div>
     <div class="card deve" id="fo-deve"></div>
     <div class="card"><h3>Calendário de pagamentos</h3><p class="muted">Em que mês e ano a empresa recebeu, somando todos os órgãos.</p>${calendario(f.mes)}</div>
     ${anos.length ? `<div class="card"><h3>Pago por ano</h3>${cols(anos.map(y => [YL(y), f.anos[y].reduce((a, r) => a + r[3] + r[4], 0)]), { color: "var(--s3)" })}</div>` : ""}
