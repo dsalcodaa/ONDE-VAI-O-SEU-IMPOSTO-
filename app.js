@@ -243,6 +243,7 @@ async function pPoderes() {
   const g = await base(); const A = g.anos;
   APP.innerHTML = head("Poderes e órgãos autônomos", "O orçamento é um só, mas cada Poder e cada órgão autônomo executa a sua parte.") +
     `<section class="wrap block"><p class="note">Os Poderes são três: Executivo, Legislativo (Assembleia) e Judiciário. Tribunal de Contas, Ministério Público e Defensoria Pública são <b>órgãos autônomos</b>, não Poderes. O portal da SEFAZ agrupa o TCE no Legislativo e a Defensoria no Executivo; aqui eles aparecem separados.</p>
+    <div class="cards-links">${Object.entries(PODER_INFO).map(([k, v]) => `<a href="#/poder/${k}"><b>${esc(v.t)}</b><span>${esc(v.s)}</span></a>`).join("")}<a href="#/orgaos"><b>Poder Executivo</b><span>Governo, secretarias, fundações, fundos e hospitais: lista de órgãos</span></a></div>
     <div class="card"><h3>Despesa paga por Poder e órgão autônomo, ano a ano</h3><div id="p-chart"></div></div>
     <div class="card"><h3>Sem o Executivo, para comparar os demais</h3><div id="p-chart2"></div></div>
     ${anosChips(A)}<div class="card" id="p-tab"></div>${nota26f()}</section>`;
@@ -257,7 +258,7 @@ async function pPoderes() {
 async function pOrgaos() {
   const g = await base();
   APP.innerHTML = head("Órgãos", `${N(ORGAOS.length)} unidades gestoras: secretarias, fundações, fundos, hospitais, Assembleia, Tribunais, Ministério Público e Defensoria. Clique em um órgão para ver tudo sobre ele.`) +
-    `<section class="wrap block">${anosChips(g.anos)}<div id="o-tab"></div>${nota26f()}</section>`;
+    `<section class="wrap block"><p class="note">A maior linha do Executivo, <a href="#/orgao/014103">SEFAZ-EG (Encargos Gerais do Estado)</a>, não é gasto da Secretaria da Fazenda: é por onde o Estado paga repasses aos municípios, dívida, precatórios e PASEP. Abra a página para ver a divisão.</p>${anosChips(g.anos)}<div id="o-tab"></div>${nota26f()}</section>`;
   let pod = "", T;
   const linhas = y => ORGAOS.filter(o => o[4][y] && (!pod || o[3] === pod)).map(o => [o[0], o[1], o[2], o[3], ...o[4][y], o[5], o[6], o[8]]);
   const draw = y => {
@@ -273,6 +274,79 @@ async function pOrgaos() {
   bindChips(APP, y => { ANO = y; draw(y); }); draw(ANO);
 }
 
+/* ---------- execução por ação (SEFAZ-Encargos Gerais e demais Poderes) ---------- */
+// linha de ação: [código, ação, dotação inicial, autorizado, empenhado, liquidado, pago, pago de anos anteriores]
+const EG = "014103";
+// grupos dos Encargos Gerais pelo código da ação do orçamento (Transparência Fiscal)
+const GRUPO_EG = c => ({ "0013": 0, "0014": 0, "0015": 0, "0016": 0, "0017": 0, "0004": 1, "0005": 1, "0002": 2, "0011": 3, "2518": 4, "2520": 4, "0012": 5 })[c] ?? 6;
+const GRUPOS_EG = ["Repasse obrigatório aos municípios (ICMS, IPVA, IPI, royalties, CIDE)", "Dívida pública: juros e amortização", "Sentenças judiciais e precatórios",
+  "PASEP (contribuição federal sobre a receita)", "Fundo de Parcerias Público-Privadas", "Devolução de tributos e cauções", "Outros encargos"];
+const NOTA_EG = `<div class="note"><b>Encargos Gerais não é o gasto da Secretaria da Fazenda com ela mesma.</b> É a conta por onde o Estado paga obrigações de todo o governo:
+  a parte do ICMS e do IPVA que a Constituição manda entregar aos municípios, a dívida pública, os precatórios, o PASEP e o fundo de PPP.
+  O custeio da própria secretaria (pessoal, sistemas, prédios) está em <a href="#/orgao/014101">SEFAZ (014101)</a>; o fundo de modernização, em <a href="#/orgao/014701">SEFAZ-FUNDO (014701)</a>.</div>`;
+function blocoAcoes(host, acoes, nome, { comUG = false, eg = false } = {}) {
+  const ys = Object.keys(acoes).map(Number).sort(); if (!ys.length) { host.innerHTML = ""; return; }
+  const y = ys.includes(ANO) ? ANO : ys[ys.length - 1];
+  host.innerHTML = `<h3>Em que o dinheiro foi usado (por ação do orçamento)</h3><p class="muted">Cada linha é uma ação do orçamento. Fonte: Transparência Fiscal (SEFAZ-AM). A soma das ações é igual ao total do órgão no ano.</p>
+    ${anosChips(ys, null, y)}${eg ? `<div id="ac-g"></div>` : ""}<div id="ac-t"></div>`;
+  const draw = y => {
+    const rows = acoes[y] || [];
+    if (eg) { const g = GRUPOS_EG.map(n => [n, 0]); rows.forEach(r => g[GRUPO_EG(r[0])][1] += r[6]);
+      $("#ac-g", host).innerHTML = `<h3>A cada R$ 100 pagos pelos Encargos Gerais em ${YL(y)}, para onde foram</h3><p class="muted">Total pago no ano: <b>${R(rows.reduce((a, r) => a + r[6], 0))}</b>.</p>${stack100(g.filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]))}`; }
+    const cols = [...(comUG ? [{ t: "Órgão", k: r => (ORGMAP[r[8]] || {}).sigla || r[8], f: (v, r) => `<a href="#/orgao/${r[8]}">${esc(v)}</a>` }] : []),
+      { t: "Ação", k: 1, f: (v, r) => `${esc(v)} <span class="muted small">(${esc(r[0])})</span>`, w: "wrap" },
+      ...(eg ? [{ t: "Grupo", k: r => GRUPOS_EG[GRUPO_EG(r[0])], w: "wrap" }] : []),
+      cR("Orçamento autorizado", 3), cR("Reservado (empenho)", 4), cR("Entregue (liquidado)", 5), cR("Pago do ano", 6), cR("Pago de anos anteriores", 7)];
+    const n = cols.length;
+    tabela($("#ac-t", host), rows, cols, { busca: rows.length > 15, ordem: [n - 2, -1], nome: `${nome}_acoes_${y}`, total: cols.map((c, i) => i >= n - 5 ? sumF(c.k) : null) });
+  };
+  bindChips(host, y => { ANO = y; draw(y); }); draw(y);
+}
+
+// Poderes e órgãos autônomos fora do Executivo: uma página para cada
+const DUODECIMO = `Tem orçamento próprio, aprovado na lei do orçamento do Estado. Quem arrecada é o Executivo, que repassa a parte de cada um em parcelas mensais (duodécimo, art. 168 da Constituição Federal).`;
+const PODER_INFO = {
+  legislativo: { p: "Legislativo", t: "Poder Legislativo", s: "Assembleia Legislativa do Estado do Amazonas (ALEAM)",
+    d: `<p>A Assembleia Legislativa faz as leis estaduais, vota o orçamento do Estado e fiscaliza o Executivo. Na fiscalização das contas, é auxiliada pelo Tribunal de Contas, que é um órgão autônomo e tem página própria.</p><p>${DUODECIMO}</p>` },
+  judiciario: { p: "Judiciário", t: "Poder Judiciário", s: "Tribunal de Justiça do Estado do Amazonas (TJAM)",
+    d: `<p>O Tribunal de Justiça julga as causas da Justiça estadual em todo o Amazonas. Tem autonomia administrativa e financeira (art. 99 da Constituição Federal). O FUNJEAM é o Fundo de Modernização e Reaparelhamento do Poder Judiciário.</p><p>${DUODECIMO}</p>
+      <p>Os <b>precatórios</b> (dívidas do Estado reconhecidas pela Justiça) não estão aqui: são pagos pelos <a href="#/orgao/014103">Encargos Gerais da SEFAZ</a>, ação "Cumprimento de Sentenças Judiciais".</p>` },
+  "tribunal-de-contas": { p: "Tribunal de Contas", t: "Tribunal de Contas do Estado", s: "Órgão autônomo de controle externo, não é um Poder",
+    d: `<p>O TCE-AM julga as contas de quem administra dinheiro público do Estado e dos municípios do Amazonas e dá parecer sobre as contas do governador, que depois são julgadas pela Assembleia (arts. 71 e 75 da Constituição Federal). O FAECE é o Fundo de Apoio ao Exercício do Controle Externo.</p><p>${DUODECIMO}</p>` },
+  "ministerio-publico": { p: "Ministério Público", t: "Ministério Público do Estado", s: "Órgão autônomo, não é um Poder; dirigido pela Procuradoria-Geral de Justiça",
+    d: `<p>O Ministério Público defende a ordem jurídica, o regime democrático e os interesses sociais (art. 127 da Constituição Federal). É quem acusa nos processos criminais e propõe ações civis públicas. O FAMP é o fundo de apoio do Ministério Público; o PROVITA é o programa de proteção a vítimas e testemunhas ameaçadas.</p><p>${DUODECIMO}</p>` },
+  defensoria: { p: "Defensoria Pública", t: "Defensoria Pública do Estado", s: "Órgão autônomo, não é um Poder",
+    d: `<p>A Defensoria Pública dá orientação jurídica e defesa gratuitas a quem não pode pagar advogado (art. 134 da Constituição Federal).</p><p>${DUODECIMO}</p>` },
+};
+const PODER_SLUG = Object.fromEntries(Object.entries(PODER_INFO).map(([k, v]) => [v.p, k]));
+
+async function pPoder(slug) {
+  const g = await base(); const info = PODER_INFO[slug]; if (!info) { location.hash = "#/poderes"; return; }
+  const ugs = ORGAOS.filter(o => o[3] === info.p);
+  const [C, ...OS] = await Promise.all([get("contratos.json"), ...ugs.map(o => get(`orgao/${o[0]}.json`))]);
+  const A = g.anos, soma = (y, i) => ugs.reduce((a, o) => a + ((o[4][y] || [])[i] || 0), 0);   // orgaos.json, por ano: [autorizado, empenhado, liquidado, pago, pago de anos anteriores]
+  const set = new Set(ugs.map(o => o[0])), ct = C.filter(c => set.has(c[1])), orig = ct.filter(c => !c[4]);
+  const acoes = {}; OS.forEach(o => Object.entries(o.acoes || {}).forEach(([y, rows]) => (acoes[y] ||= []).push(...rows.map(r => [...r, o.ug]))));
+  APP.innerHTML = head(`${esc(info.t)} ${pbadge(info.p)}`, esc(info.s), `<a href="#/poderes">Poderes</a> › ${esc(info.t)}`) + `<section class="wrap block">
+    <div class="card">${info.d}<p class="muted small">Unidades orçamentárias: ${ugs.map(o => `<a href="#/orgao/${o[0]}">${esc(o[1])}</a> (${esc(o[2])})`).join(" · ")}.</p></div>
+    <div id="pd-res">${anosChips(A)}<div class="tiles" id="pd-tiles"></div></div>
+    <div class="card"><h3>Ano a ano</h3>${gcols(A.map(YL), [A.map(y => soma(y, 0)), A.map(y => soma(y, 2)), A.map(y => soma(y, 3))], ["Orçamento autorizado", "Entregue (liquidado)", "Pago"], { colors: ["var(--axis)", "var(--s1)", "var(--s3)"] })}<div id="pd-anos"></div></div>
+    <div class="card" id="pd-ac"></div>
+    <div class="card"><h3>Contratos (2019–2026)</h3><p class="muted">${N(orig.length)} contratos originais e ${N(ct.length - orig.length)} aditivos, registrados no TCE-AM (e-Contas). Valor dos originais: <b>${R(orig.reduce((a, c) => a + c[7], 0))}</b>. Valor contratado não é dívida nem valor pago. O quanto foi pago em cada contrato: não localizado na fonte consultada (o TCE-AM não liga pagamento a contrato).</p><div id="pd-ct"></div></div>
+    ${nota26f()}</section>`;
+  const tiles = y => { const tot = PODERES.reduce((a, p) => a + ((g.poder[y] || {})[p] || [])[3] || 0, 0);
+    $("#pd-tiles").innerHTML = [["Orçamento autorizado", R(soma(y, 0))], ["Entregue (liquidado)", R(soma(y, 2))], ["Pago do ano", R(soma(y, 3))],
+      ["Fatia do total pago pelo Estado", tot ? PC(g.poder[y][info.p][3], tot) : "–"]].map(([t, v]) => `<div class="tile"><p class="k">${t} · ${YL(y)}</p><p class="v long">${v}</p></div>`).join(""); };
+  bindChips($("#pd-res"), y => { ANO = y; tiles(y); }); tiles(A.includes(ANO) ? ANO : A[A.length - 1]);
+  tabela($("#pd-anos"), A.map(y => [YL(y), soma(y, 0), soma(y, 1), soma(y, 2), soma(y, 3), soma(y, 4)]), [{ t: "Ano", k: 0 }, cR("Orçamento autorizado", 1), cR("Reservado (empenho)", 2), cR("Entregue (liquidado)", 3), cR("Pago do ano", 4), cR("Entregue e não pago", r => r[3] - r[4]), cR("Pago de anos anteriores", 5)],
+    { busca: false, nome: `${slug}_execucao` });
+  blocoAcoes($("#pd-ac"), acoes, slug, { comUG: ugs.length > 1 });
+  tabela($("#pd-ct"), ct, [{ t: "Órgão", k: r => (ORGMAP[r[1]] || {}).sigla || r[1], f: (v, r) => `<a href="#/orgao/${r[1]}">${esc(v)}</a>` }, { t: "Nº", k: 3, f: (v, r) => (r[4] ? "› " : "") + esc(v) }, { t: "Ano", k: 2 },
+    { t: "Contratado", k: 6, f: (v, r) => r[5] ? `<a href="#/fornecedor/${dig(r[5])}">${esc(v)}</a><br><span class="small muted">${esc(r[5])}</span>` : esc(v), w: "wrap" },
+    cR("Valor", 7), { t: "Vencimento", k: r => dataISO(r[9]), f: (v, r) => DBR(r[9]) + (dataISO(r[9]) > HOJE ? ' <span class="badge p2">vigente</span>' : "") }],
+    { ordem: [4, -1], pag: 25, nome: `${slug}_contratos`, rowClass: r => r[4] ? "adit" : "" });
+}
+
 async function pOrgao(ug) {
   await base();
   const o = await get(`orgao/${ug}.json`);
@@ -283,6 +357,8 @@ async function pOrgao(ug) {
     `<section class="wrap block">
     <div class="card"><h3>Execução ano a ano</h3>${gcols(anos.map(YL), [anos.map(y => o.exec[y][1]), anos.map(y => o.exec[y][3]), anos.map(y => o.exec[y][4])], ["Orçamento autorizado", "Entregue (liquidado)", "Pago"], { colors: ["var(--axis)", "var(--s1)", "var(--s3)"] })}
     <div id="ex-tab"></div></div>
+    ${ug === EG ? NOTA_EG : ""}${PODER_SLUG[o.poder] ? `<p class="note">Este órgão faz parte de: <a href="#/poder/${PODER_SLUG[o.poder]}">${esc(PODER_INFO[PODER_SLUG[o.poder]].t)}</a> (o que é, todas as unidades e os contratos).</p>` : ""}
+    ${o.acoes && Object.keys(o.acoes).length ? `<div class="card" id="ac-bloco"></div>` : ""}
     <details class="card"><summary><b>Calendário de pagamentos</b> <span class="muted small">(mês a mês, 2019–2026; clique para abrir)</span></summary>${calendario(o.mes)}</details>
     <div class="tabs" role="tablist">
       <button role="tab" data-t="cred" aria-selected="true">Quem recebeu <span class="cnt">(${N(Object.values(o.credores).reduce((a, v) => a + v.length, 0))})</span></button>
@@ -293,6 +369,7 @@ async function pOrgao(ug) {
     </div><div id="tab-body"></div></section>`;
   tabela($("#ex-tab"), anos.map(y => [YL(y), ...o.exec[y]]), [{ t: "Ano", k: 0 }, cR("Orçamento inicial", 1), cR("Orçamento autorizado", 2), cR("Reservado (empenho)", 3), cR("Entregue (liquidado)", 4), cR("Pago", 5),
     cR("Entregue e não pago", r => r[4] - r[5]), cR("Pago de anos anteriores", 6)], { busca: false, nome: `${o.sigla}_execucao` });
+  if ($("#ac-bloco")) blocoAcoes($("#ac-bloco"), o.acoes, o.sigla, { eg: ug === EG });
   const body = $("#tab-body");
   const T = {
     cred() {
@@ -451,19 +528,29 @@ async function pContratos() {
   const anos = [...new Set(orig.map(c => c[2]))].sort();
   APP.innerHTML = head("Contratos", `${N(orig.length)} contratos originais e ${N(C.length - orig.length)} aditivos registrados de 2019 a 2026 em todos os Poderes.`) + `<section class="wrap block">
     <div class="card"><h3>Valor dos contratos originais por ano de assinatura</h3>${cols(anos.map(y => [YL(y), orig.filter(c => c[2] === y).reduce((a, c) => a + c[7], 0), N(orig.filter(c => c[2] === y).length) + " contratos"]))}</div>
-    <div id="c-tab"></div><p class="note">Executivo: Sistema de Gestão de Contratos (SGC) da SEFAZ, com aditivos ligados ao contrato original. Demais Poderes e órgãos autônomos: TCE-AM e-Contas. Valores acima de R$ 3 bilhões num único registro podem ser erro de digitação na fonte. Clique no órgão para ver o objeto completo de cada contrato.</p></section>`;
+    <div class="card"><h3>De quem são os contratos</h3><p class="muted">O Executivo (secretarias, fundações, fundos, hospitais) é o principal contratante. Os demais Poderes e os órgãos autônomos têm contratos próprios; clique no nome para abrir a página de cada um.</p><div id="c-pod"></div></div>
+    <div id="c-tab"></div><p class="note">Executivo: Sistema de Gestão de Contratos (SGC) da SEFAZ, com aditivos ligados ao contrato original. Demais Poderes e órgãos autônomos: TCE-AM e-Contas, que não informa o valor pago por contrato (aparece "–"). Valores acima de R$ 3 bilhões num único registro podem ser erro de digitação na fonte. Clique no órgão para ver o objeto completo de cada contrato.</p></section>`;
+  const podDe = c => (ORGMAP[c[1]] || {}).poder || "não identificado";
+  const vOrig = orig.reduce((a, c) => a + c[7], 0);
+  tabela($("#c-pod"), [...PODERES, "não identificado"].map(p => { const cs = C.filter(c => podDe(c) === p), os = cs.filter(c => !c[4]);
+    return [p, os.length, cs.length - os.length, os.reduce((a, c) => a + c[7], 0), cs.reduce((a, c) => a + (c[8] || 0), 0)]; }).filter(r => r[1] + r[2]),
+    [{ t: "Poder / órgão autônomo", k: 0, f: v => PODER_SLUG[v] ? `<a href="#/poder/${PODER_SLUG[v]}">${pbadge(v)}</a>` : v === "Executivo" ? `<a href="#/orgaos">${pbadge(v)}</a>` : esc(v) },
+      { t: "Contratos originais", k: 1, r: 1, f: v => N(v) }, { t: "Aditivos", k: 2, r: 1, f: v => N(v) }, cR("Valor dos originais", 3), { t: "% do valor", k: 3, r: 1, f: v => PC(v, vOrig) }, cR("Pago (notas de empenho do contrato)", 4, { f: (v, r) => r[0] === "Executivo" ? esc(R(v)) : "não localizado na fonte consultada" }),
+      { t: "Fonte", k: r => r[0] === "Executivo" ? "SGC (SEFAZ)" : "TCE-AM (e-Contas)" }],
+    { busca: false, nome: "contratos_por_poder", total: [null, d => N(d.reduce((a, r) => a + r[1], 0)), d => N(d.reduce((a, r) => a + r[2], 0)), sumF(3), null, sumF(4), null] });
   let rows = C;
   const t = tabela($("#c-tab"), rows, [
-    { t: "Órgão", k: r => (ORGMAP[r[1]] || {}).sigla || r[1], f: (v, r) => `<a href="#/orgao/${r[1]}">${esc(v)}</a>` }, { t: "Nº", k: 3, f: (v, r) => (r[4] ? "› " : "") + esc(v) }, { t: "Ano", k: 2 },
+    { t: "Órgão", k: r => (ORGMAP[r[1]] || {}).sigla || r[1], f: (v, r) => `<a href="#/orgao/${r[1]}">${esc(v)}</a>` }, { t: "Poder", k: r => podDe(r), f: v => pbadge(v) }, { t: "Nº", k: 3, f: (v, r) => (r[4] ? "› " : "") + esc(v) }, { t: "Ano", k: 2 },
     { t: "Contratado", k: 6, f: (v, r) => r[5] ? `<a href="#/fornecedor/${dig(r[5])}">${esc(v)}</a><br><span class="small muted">${esc(r[5])}</span>` : esc(v), w: "wrap" },
-    cR("Valor", 7), cR("Pago", 8), { t: "Vencimento", k: r => dataISO(r[9]), f: (v, r) => DBR(r[9]) + (dataISO(r[9]) > hoje ? ' <span class="badge p2">vigente</span>' : "") },
-  ], { ordem: [4, -1], nome: "contratos", rowClass: r => r[4] ? "adit" : "",
-    filtros: `<label>Ano <select id="c-ano"><option value="">Todos</option>${anos.map(y => `<option>${y}</option>`).join("")}</select></label>
+    cR("Valor", 7), cR("Pago", 8, { f: (v, r) => podDe(r) === "Executivo" ? esc(R(v)) : "–" }), { t: "Vencimento", k: r => dataISO(r[9]), f: (v, r) => DBR(r[9]) + (dataISO(r[9]) > hoje ? ' <span class="badge p2">vigente</span>' : "") },
+  ], { ordem: [5, -1], nome: "contratos", rowClass: r => r[4] ? "adit" : "",
+    filtros: `<label>Poder <select id="c-pd"><option value="">Todos</option>${PODERES.map(p => `<option>${p}</option>`).join("")}</select></label>
+      <label>Ano <select id="c-ano"><option value="">Todos</option>${anos.map(y => `<option>${y}</option>`).join("")}</select></label>
       <label>Tipo <select id="c-tipo"><option value="">Originais e aditivos</option><option value="o">Só originais</option><option value="a">Só aditivos</option></select></label>
       <label><input type="checkbox" id="c-vig"> só vigentes depois de ${DC}</label>` });
-  const ap = () => { const a = $("#c-ano").value, tp = $("#c-tipo").value, v = $("#c-vig").checked;
-    t.set(C.filter(c => (!a || c[2] === +a) && (!tp || (tp === "o" ? !c[4] : c[4])) && (!v || dataISO(c[9]) > hoje))); };
-  ["#c-ano", "#c-tipo", "#c-vig"].forEach(s => $(s).onchange = ap);
+  const ap = () => { const a = $("#c-ano").value, tp = $("#c-tipo").value, v = $("#c-vig").checked, pd = $("#c-pd").value;
+    t.set(C.filter(c => (!pd || podDe(c) === pd) && (!a || c[2] === +a) && (!tp || (tp === "o" ? !c[4] : c[4])) && (!v || dataISO(c[9]) > hoje))); };
+  ["#c-pd", "#c-ano", "#c-tipo", "#c-vig"].forEach(s => $(s).onchange = ap);
 }
 
 async function pTransicao() {
@@ -565,7 +652,7 @@ async function pFontes() {
 }
 
 /* ---------- roteador ---------- */
-const ROTAS = [[/^#\/?$/, pInicio], [/^#\/gastos$/, pGastos], [/^#\/receitas$/, pReceitas], [/^#\/poderes$/, pPoderes], [/^#\/orgaos$/, pOrgaos], [/^#\/orgao\/(\d+)$/, pOrgao],
+const ROTAS = [[/^#\/?$/, pInicio], [/^#\/gastos$/, pGastos], [/^#\/receitas$/, pReceitas], [/^#\/poderes$/, pPoderes], [/^#\/poder\/([a-z-]+)$/, pPoder], [/^#\/orgaos$/, pOrgaos], [/^#\/orgao\/(\d+)$/, pOrgao],
   [/^#\/fornecedores$/, pFornecedores], [/^#\/fornecedor\/(\d{14})$/, pFornecedor], [/^#\/contratos$/, pContratos], [/^#\/transicao$/, pTransicao], [/^#\/leis$/, pLeis],
   [/^#\/municipios$/, pMunicipios], [/^#\/servidores$/, pServidores], [/^#\/fontes$/, pFontes], [/^#\/ranking$/, pRanking]];
 async function rota() {
