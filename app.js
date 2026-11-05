@@ -553,10 +553,33 @@ async function pContratos() {
   ["#c-pd", "#c-ano", "#c-tipo", "#c-vig"].forEach(s => $(s).onchange = ap);
 }
 
+// O que a gestão de 2027 recebe: três partes de natureza diferente, que não se somam.
+function cardHeranca(g) {
+  const ly = Math.max(...Object.keys(g.lrf).map(Number)), L = g.lrf[ly], e = g.exec[PARCIAL], v = g.exec[PARCIAL - 1];
+  const fonteDC = L.per === "exercício" ? `fim de ${ly}` : `${L.per} de ${ly}`;
+  return `<div class="card deve"><h3>O que a próxima gestão (2027) vai receber</h3>
+    <p class="muted">São três coisas diferentes: <b>não some uma com a outra</b>. Os valores mudam a cada atualização, conforme os portais publicam dados novos. O número final só existe depois de 31/12/${PARCIAL}.</p>
+    <h4>1. Dívida pública</h4>
+    <div class="kv"><div class="kv-deve"><span class="k">Dívida consolidada (${fonteDC})</span><span class="v">${R(L.dc)}</span></div>
+      <div><span class="k">Dívida consolidada líquida (desconta caixa e créditos)</span><span class="v">${R(L.dcl)}</span></div>
+      <div><span class="k">Dívida líquida / receita corrente líquida</span><span class="v">${L.dclp == null ? "–" : nf2.format(L.dclp) + "%"}</span></div>
+      ${L.dc0 != null ? `<div><span class="k">Dívida consolidada no início de ${ly}</span><span class="v">${R(L.dc0)}</span></div>` : ""}</div>
+    <p class="muted small">Empréstimos e financiamentos de longo prazo, pagos em parcelas ao longo de várias gestões. Fonte: SICONFI/Tesouro Nacional, Relatório de Gestão Fiscal (RGF), anexo 2, Poder Executivo, ${fonteDC}. O RGF sai a cada quatro meses.</p>
+    <h4>2. Contas de ${YL(PARCIAL)} ainda abertas (até ${DC})</h4>
+    <div class="kv"><div class="kv-deve"><span class="k">Entregue e não pago</span><span class="v">${R(e[3] - e[4])}</span></div>
+      <div><span class="k">Reservado e não entregue</span><span class="v">${R(e[2] - e[3])}</span></div></div>
+    <p class="muted small">Entregue e não pago: serviço ou produto já conferido pelo órgão, ainda sem pagamento. Reservado e não entregue: empenho sem entrega, que pode ser pago, cancelado ou passar para ${PARCIAL + 1}. O que ficar aberto em 31/12 vira restos a pagar. Os dois valores costumam cair até dezembro: na virada de ${PARCIAL - 1} para ${PARCIAL} ficaram ${R(v[3] - v[4])} entregues e não pagos e ${R(v[2] - v[3])} reservados e não entregues. Fonte: Transparência Fiscal SEFAZ-AM.</p>
+    <h4>3. Contratos que continuam depois de ${PARCIAL}</h4>
+    <div class="kv"><div><span class="k">Contratos do Executivo vigentes depois de 31/12/${PARCIAL}</span><span class="v">${N(g.prox.n)}</span></div>
+      <div><span class="k">Valor contratado</span><span class="v">${R(g.prox.vct)}</span></div><div><span class="k">Já pago</span><span class="v">${R(g.prox.vpag)}</span></div></div>
+    <p class="muted small">Não é dívida: é compromisso futuro, que só vira despesa quando o serviço for entregue. Fonte: SGC/SEFAZ-AM.</p></div>`;
+}
+
 async function pTransicao() {
   const g = await base(); const A = g.anos; const D = await get("doe_divida.json");
   const e = g.exec, l = g.lrf;
   APP.innerHTML = head("O que fica para a próxima gestão", "Contas a pagar, despesas de anos anteriores, dívidas reconhecidas, dívida pública e contratos que continuam depois de 2026.") + `<section class="wrap block">
+  ${cardHeranca(g)}
   <h2>Liquidado e ainda não pago</h2><p>A despesa tem três etapas: <b>empenho</b> (o Estado reserva o dinheiro), <b>liquidação</b> (o órgão confirma que recebeu o bem ou serviço) e <b>pagamento</b>. O que foi liquidado e não pago até 31/12 vira <b>restos a pagar processados</b>: conta certa que passa para o ano seguinte.</p>
   <div class="card">${gcols(A.map(YL), [A.map(y => e[y][3] - e[y][4]), A.map(y => e[y][2] - e[y][3])], ["Entregue e não pago", "Reservado e não entregue"], { colors: ["var(--s2)", "var(--s4)"] })}</div><div id="t-liq"></div>
   <h2 style="margin-top:36px">2026 por Poder (até ${DC})</h2><div id="t-pod"></div>
