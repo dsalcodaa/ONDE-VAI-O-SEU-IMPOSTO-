@@ -347,6 +347,40 @@ async function pPoder(slug) {
     { ordem: [4, -1], pag: 25, nome: `${slug}_contratos`, rowClass: r => r[4] ? "adit" : "" });
 }
 
+// Totais do órgão, de 2019 até a data da coleta. Blocos de natureza diferente: não se somam.
+function cardTotaisOrgao(o, anos) {
+  const sum = (a, f) => a.reduce((s, r) => s + (f(r) || 0), 0);
+  const ex = y => o.exec[y] || [0, 0, 0, 0, 0, 0];   // dotação, autorizado, empenhado, liquidado, pago, pago de anos anteriores
+  const e = ex(PARCIAL), ant = ex(PARCIAL - 1);
+  const pagoAno = sum(anos, y => ex(y)[4]), pagoRP = sum(anos, y => ex(y)[5]), liq = sum(anos, y => ex(y)[3]);
+  const deaEmp = sum(o.dea, r => r[9]), deaPago = sum(o.dea, r => r[10]);
+  const doeV = sum(o.doeDivida, r => r[4]);
+  const fim = `${PARCIAL}-12-31`, orig = o.contratos.filter(c => !c[4]), adit = o.contratos.filter(c => c[4]);
+  const segue = orig.filter(c => dataISO(c[10]) > fim || adit.some(a => a[3] === c[2] && dataISO(a[10]) > fim));
+  return `<div class="card deve"><h3>Totais do órgão (${YL(anos[0])} a ${DC})</h3>
+    <p class="muted">Cada bloco mede uma coisa diferente: <b>não some um com o outro</b>. Fonte: Transparência Fiscal SEFAZ-AM, TCE-AM, Diário Oficial e SGC/SEFAZ-AM.</p>
+    <h4>Quanto pagou</h4>
+    <div class="kv"><div><span class="k">Total pago (${YL(anos[0])}–${YL(PARCIAL)})</span><span class="v">${R(pagoAno + pagoRP)}</span></div>
+      <div><span class="k">Pago das contas do próprio ano</span><span class="v">${R(pagoAno)}</span></div>
+      <div><span class="k">Pago de contas de anos anteriores (restos a pagar)</span><span class="v">${R(pagoRP)}</span></div>
+      <div><span class="k">Total entregue (liquidado)</span><span class="v">${R(liq)}</span></div></div>
+    <h4>Quanto deve hoje (contas de ${YL(PARCIAL)}, até ${DC})</h4>
+    <div class="kv"><div class="kv-deve"><span class="k">Entregue e não pago</span><span class="v">${R(e[3] - e[4])}</span></div>
+      <div><span class="k">Reservado e não entregue (empenho)</span><span class="v">${R(e[2] - e[3])}</span></div>
+      <div><span class="k">Entregue e não pago na virada de ${PARCIAL - 1} para ${PARCIAL}</span><span class="v">${R(ant[3] - ant[4])}</span></div></div>
+    <p class="muted small">Entregue e não pago: serviço ou produto já conferido pelo órgão, ainda sem pagamento. É a conta certa em aberto. O que ficar aberto em 31/12 vira restos a pagar.</p>
+    <h4>DEA e dívidas reconhecidas</h4>
+    <div class="kv"><div><span class="k">DEA paga (${N(o.dea.length)} empenhos)</span><span class="v">${R(deaPago)}</span></div>
+      <div><span class="k">DEA reservada (empenho)</span><span class="v">${R(deaEmp)}</span></div>
+      <div><span class="k">Dívidas reconhecidas no Diário Oficial (${N(o.doeDivida.length)} atos)</span><span class="v">${R(doeV)}</span></div></div>
+    <p class="muted small">DEA: conta de um ano passado reconhecida e paga depois (Lei 4.320/1964, art. 37). Lista do TCE-AM. Os reconhecimentos de dívida vêm dos extratos publicados no Diário Oficial e podem repetir valores já pagos como DEA.</p>
+    <h4>Contratos que continuam depois de ${PARCIAL}</h4>
+    <div class="kv"><div><span class="k">Contratos vigentes depois de 31/12/${PARCIAL}</span><span class="v">${N(segue.length)}</span></div>
+      <div><span class="k">Valor contratado (originais)</span><span class="v">${R(sum(segue, c => c[11]))}</span></div>
+      <div><span class="k">Já pago nesses contratos</span><span class="v">${R(sum(segue, c => c[13]))}</span></div></div>
+    <p class="muted small">Contrato não é dívida: vira despesa só quando o serviço é entregue. <b>Dívida pública</b> (empréstimos e financiamentos) é do Estado como um todo e não é separada por órgão; está em <a href="#/transicao">O que fica para a próxima gestão</a>.</p></div>`;
+}
+
 async function pOrgao(ug) {
   await base();
   const o = await get(`orgao/${ug}.json`);
@@ -355,6 +389,7 @@ async function pOrgao(ug) {
   const hoje = HOJE;
   APP.innerHTML = head(`${esc(o.sigla)} ${pbadge(o.poder)}`, esc(o.nome), `<a href="#/orgaos">Órgãos</a> › ${esc(o.sigla)}`) +
     `<section class="wrap block">
+    ${cardTotaisOrgao(o, anos)}
     <div class="card"><h3>Execução ano a ano</h3>${gcols(anos.map(YL), [anos.map(y => o.exec[y][1]), anos.map(y => o.exec[y][3]), anos.map(y => o.exec[y][4])], ["Orçamento autorizado", "Entregue (liquidado)", "Pago"], { colors: ["var(--axis)", "var(--s1)", "var(--s3)"] })}
     <div id="ex-tab"></div></div>
     ${ug === EG ? NOTA_EG : ""}${PODER_SLUG[o.poder] ? `<p class="note">Este órgão faz parte de: <a href="#/poder/${PODER_SLUG[o.poder]}">${esc(PODER_INFO[PODER_SLUG[o.poder]].t)}</a> (o que é, todas as unidades e os contratos).</p>` : ""}
